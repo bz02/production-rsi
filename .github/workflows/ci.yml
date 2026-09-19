@@ -1,7 +1,13 @@
-# The decision arithmetic and the agent's sandbox are the two things that must never
-# regress quietly, and neither needs a browser — so CI runs them on every push in a
-# few seconds. The Playwright loop itself is deliberately not run here: a full round
-# takes minutes and its value is the measurement, not a pass/fail.
+# Two jobs, split by what they cost.
+#
+# `checks` is the arithmetic and the sandbox: no browser, no server, a few seconds.
+# `gate` runs a browser, because the claim it checks is not arithmetic — that a
+# candidate which breaks the funnel never reaches live traffic. It is worth the
+# ninety seconds: the gate has never failed in a real round, so without a test that
+# deliberately breaks things, nobody would know it still works.
+#
+# The full Playwright loop is deliberately not run here. A round takes minutes and its
+# value is the measurement, not a pass/fail.
 name: tests
 
 on:
@@ -23,6 +29,25 @@ jobs:
       - name: agent sandbox
         run: python agent/test_tools.py
 
+      - name: the model call degrades to the heuristic
+        run: python agent/test_llm.py
+
       - name: every module imports cleanly
         run: |
           python -m compileall -q agent analyzer orchestrator sim dashboard app
+
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install the app and a browser
+        run: |
+          pip install --quiet flask playwright
+          python -m playwright install --with-deps chromium
+
+      - name: the eval gate blocks a broken candidate
+        run: python sim/test_gate.py

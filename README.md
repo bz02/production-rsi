@@ -273,10 +273,13 @@ ambiguous.
 ```bash
 python analyzer/test_stats.py   # decision arithmetic and policy classification
 python agent/test_tools.py      # the agent's sandbox
+python agent/test_llm.py        # the model call, and its fallback
+python sim/test_gate.py         # the eval gate, against deliberately broken candidates
 ```
 
-Neither needs a browser or a server, so both run in CI on every push
-(`.github/workflows/ci.yml`) in a few seconds.
+The first three need no browser and no server, so they run in CI on every push in a
+few seconds. The fourth runs a browser and gets its own CI job, because the claim it
+checks is not arithmetic.
 
 `test_stats.py` is 20 checks over the arithmetic that decides things: the z-test (including the
 interface document's own claim that 30% vs 45% at n=80 lands at p≈0.05), the
@@ -287,6 +290,20 @@ diff editing `analyzer/analyze.py` comes back `invalid`. That last one is what m
 before anything is written: `..` traversal out of a real subdirectory, an absolute
 path, and a symlink pointing out of the sandbox, with the file outside checked
 afterwards to confirm it was not touched.
+
+`sim/test_gate.py` is the one test that runs a browser. The eval gate has never
+failed in a real round — the playbook only emits well-formed edits, which is the
+point of the playbook — so a gate nobody has watched fail is a gate nobody knows
+works. It manufactures the failures instead, in temp copies of `app/`: a step with no
+forward action, a 500 mid-funnel, and an input the simulator cannot see. Each one has
+to be caught by the named case that should catch it, and the intact app still has to
+pass.
+
+`agent/test_llm.py` covers the model call with a stubbed transport: a good answer is
+used, and a hallucinated hypothesis id, prose with no JSON, truncated JSON, an
+unreachable API and a missing key all fall back to the heuristic. That fallback is
+invisible when it works — a run with a dead key looks like a run without one — so it
+is worth asserting that the silence is deliberate.
 
 ---
 

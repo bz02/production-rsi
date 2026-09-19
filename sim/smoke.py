@@ -107,12 +107,29 @@ def run_suite(base_url: str) -> dict[str, Any]:
                 contract_failures.append(f"step '{step}' has {len(primaries)} primary-action elements, expected 1")
                 break
 
-            # required fields must be marked, or the simulator cannot respect personas
+            # Fields must be marked, or the simulator cannot respect personas: it finds
+            # them by `input[data-testid^="field-"]`, so an unmarked input is invisible
+            # to it and every rule that counts fields silently stops working. Checking
+            # the marked ones for a mark would prove nothing — the selector already
+            # guarantees it — so this asks every real input on the page.
+            for handle in page.query_selector_all("input"):
+                kind = (handle.get_attribute("type") or "text").lower()
+                if kind in ("hidden", "submit", "button", "image", "reset", "checkbox", "radio"):
+                    continue
+                if (handle.get_attribute("data-testid") or "").startswith("field-"):
+                    continue
+                try:
+                    if (handle.input_value() or "").strip():
+                        continue  # ships with a default (the cart quantity), so nothing blocks
+                except PlaywrightError:
+                    continue
+                name = handle.get_attribute("name") or kind
+                contract_failures.append(
+                    f"step '{step}' has an empty input the simulator cannot see: {name} "
+                    f"(no field-* testid)")
+                break
+
             fields = page.query_selector_all(FIELD)
-            for handle in fields:
-                testid = handle.get_attribute("data-testid") or ""
-                if not testid.startswith("field-"):
-                    contract_failures.append(f"step '{step}' has an input without a field-* testid")
             for handle in fields:
                 try:
                     handle.fill(FILLERS.get((handle.get_attribute("data-testid") or "field-x")[6:], "Smoke Test"))
