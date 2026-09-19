@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-Improving Growth Agent</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header class="head">
+  <div class="wrap head-in">
+    <div class="title">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <h1>Self-Improving Growth Agent</h1>
+        <p class="sub">Nimbus Supply checkout &middot; logs &rarr; hypothesis &rarr; code &rarr; eval &rarr; A/B &rarr; adopt or roll back</p>
+      </div>
+    </div>
+    <div class="head-right">
+      <div class="live"><span class="dot" id="liveDot"></span><span id="liveText">connecting</span></div>
+      <div class="round-badge">round <b id="roundNo">–</b></div>
+    </div>
+  </div>
+  <div class="wrap">
+    <ol class="pipeline" id="pipeline" aria-label="loop phase"></ol>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card hero-card">
+    <div class="card-head">
+      <h2>Conversion rate by round</h2>
+      <div class="legend">
+        <span><i class="sw sw-control"></i>baseline (control)</span>
+        <span><i class="sw sw-treat"></i>candidate (treatment)</span>
+        <span><i class="sw sw-hold"></i>holdout personas</span>
+      </div>
+    </div>
+    <div id="chart" class="chart" role="img" aria-label="conversion rate per round"></div>
+    <div class="holdout-row" id="holdoutRow"></div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head"><h2>Where customers are lost</h2><span class="hint" id="frictionRound"></span></div>
+      <div id="friction" class="friction"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Activity</h2><span class="hint">newest first</span></div>
+      <ol id="timeline" class="timeline"></ol>
+    </div>
+  </section>
+
+  <section id="rounds" class="rounds"></section>
+
+  <footer class="foot">
+    <span>Every number on this page comes from a real Playwright run against two live instances.</span>
+    <span>Seed is fixed so a run reproduces exactly.</span>
+    <span><code id="updated">–</code></span>
+  </footer>
+</main>
+
+<div class="lightbox" id="lightbox" hidden>
+  <button class="lb-close" id="lbClose" aria-label="close">&times;</button>
+  <img id="lbImg" alt="screenshot">
+  <p class="lb-cap" id="lbCap"></p>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

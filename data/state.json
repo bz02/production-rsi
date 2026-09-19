@@ -1,6 +1,6 @@
 {
-  "current_round": 0,
-  "phase": "idle",
+  "current_round": 1,
+  "phase": "running_ab",
   "phase_options": [
     "analyzing",
     "implementing",
@@ -11,7 +11,7 @@
   "conversion_series": [
     {
       "round": 0,
-      "control": 0.25
+      "control": 0.2625
     }
   ],
   "rounds": [
@@ -27,7 +27,7 @@
       "diff_path": null,
       "metrics_path": "metrics/round_0.json",
       "conversion": {
-        "control": 0.25,
+        "control": 0.2625,
         "treatment": null
       },
       "hypotheses": [],
@@ -40,29 +40,29 @@
       "top_friction": [
         {
           "type": "abandon_reason",
-          "value": "blocked",
-          "count": 11,
-          "step": "product"
-        },
-        {
-          "type": "blocked_click",
-          "value": "click_intercepted",
-          "count": 11,
-          "step": "product",
-          "device": "mobile"
-        },
-        {
-          "type": "abandon_reason",
           "value": "forced_signup",
-          "count": 4,
+          "count": 34,
           "step": "signup"
         },
         {
           "type": "abandon_reason",
           "value": "too_many_fields",
-          "count": 3,
+          "count": 18,
           "step": "signup",
           "field_count": 8
+        },
+        {
+          "type": "abandon_reason",
+          "value": "blocked",
+          "count": 7,
+          "step": "payment"
+        },
+        {
+          "type": "blocked_click",
+          "value": "click_intercepted",
+          "count": 7,
+          "step": "payment",
+          "device": "mobile"
         },
         {
           "type": "validation_error",
@@ -75,13 +75,33 @@
   ],
   "timeline": [
     {
-      "ts": 1789849650.9369953,
-      "msg": "Round 0: measuring the untouched baseline over 24 sessions"
+      "ts": 1789849965.1999536,
+      "msg": "Round 0: measuring the untouched baseline over 80 sessions"
     },
     {
-      "ts": 1789849771.5442443,
-      "msg": "Round 0 baseline conversion 25.0%; top friction: blocked, click_intercepted, forced_signup"
+      "ts": 1789850136.0599215,
+      "msg": "Round 0 baseline conversion 26.2%; top friction: forced_signup, too_many_fields, blocked"
+    },
+    {
+      "ts": 1789850136.0603182,
+      "msg": "Round 1: agent reading round 0 summary"
+    },
+    {
+      "ts": 1789850136.1267283,
+      "msg": "Agent proposed 3 hypotheses (heuristic ranking), selected: Add a guest checkout path"
+    },
+    {
+      "ts": 1789850136.1289213,
+      "msg": "Diff written: 3 file(s) changed"
+    },
+    {
+      "ts": 1789850138.6518898,
+      "msg": "Eval gate: 5/5 cases passed -> PASS"
+    },
+    {
+      "ts": 1789850143.173857,
+      "msg": "Running A/B: 80 sessions per arm"
     }
   ],
-  "updated_at": 1789849771.5444436
+  "updated_at": 1789850143.1739109
 }
