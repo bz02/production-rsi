@@ -1,0 +1,94 @@
+{
+  "round_analyzed": 0,
+  "baseline_conversion": 0.45,
+  "baseline_sessions": 20,
+  "funnel": [
+    {
+      "step": "landing",
+      "reached": 20,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "product",
+      "reached": 20,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "cart",
+      "reached": 20,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "signup",
+      "reached": 20,
+      "dropped": 11,
+      "drop_rate": 0.55
+    },
+    {
+      "step": "shipping",
+      "reached": 9,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "payment",
+      "reached": 9,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "confirmation",
+      "reached": 9,
+      "dropped": 0,
+      "drop_rate": 0.0
+    }
+  ],
+  "top_friction": [
+    {
+      "type": "abandon_reason",
+      "value": "too_many_fields",
+      "count": 6,
+      "step": "signup",
+      "field_count": 8
+    },
+    {
+      "type": "abandon_reason",
+      "value": "forced_signup",
+      "count": 5,
+      "step": "signup"
+    },
+    {
+      "type": "validation_error",
+      "value": "field_rejected",
+      "count": 1,
+      "step": "shipping"
+    }
+  ],
+  "by_persona": {
+    "careful_desktop": {
+      "n": 5,
+      "conversion_rate": 1.0,
+      "device": "desktop"
+    },
+    "impatient_desktop": {
+      "n": 8,
+      "conversion_rate": 0.25,
+      "device": "desktop"
+    },
+    "novice_mobile": {
+      "n": 7,
+      "conversion_rate": 0.2857,
+      "device": "mobile"
+    }
+  },
+  "sample_traces": [
+    "[novice_mobile] landing:click -> product:click -> cart:click -> signup:abandon(too_many_fields) -> signup:session_end | last_step=signup steps=4",
+    "[impatient_desktop] landing:click -> product:click -> cart:click -> signup:abandon(forced_signup) -> signup:session_end | last_step=signup steps=4",
+    "[impatient_desktop] landing:click -> product:click -> cart:click -> signup:abandon(too_many_fields) -> signup:session_end | last_step=signup steps=4",
+    "[impatient_desktop] landing:click -> product:click -> cart:click -> signup:abandon(too_many_fields) -> signup:session_end | last_step=signup steps=4",
+    "[novice_mobile] landing:click -> product:click -> cart:click -> signup:abandon(too_many_fields) -> signup:session_end | last_step=signup steps=4"
+  ]
+}

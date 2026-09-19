@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Nimbus Supply{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body data-step="{{ step }}">
+<header class="topbar">
+  <div class="shell topbar-in">
+    <a class="brand" href="/"><span class="mark"></span>Nimbus Supply</a>
+    <nav class="topnav">
+      <a href="/product">Shop</a>
+      <a href="/product">Lighting</a>
+      <a href="/cart">Cart<span class="pill">{{ cart_qty }}</span></a>
+    </nav>
+  </div>
+</header>
+
+{% block progress %}
+<div class="shell">
+  <ol class="crumbs">
+    {% for s in ['cart', 'signup', 'shipping', 'payment', 'confirmation'] %}
+      <li class="{% if s == step %}on{% endif %}">{{ s }}</li>
+    {% endfor %}
+  </ol>
+</div>
+{% endblock %}
+
+<main class="shell">
+  {% block body %}{% endblock %}
+</main>
+
+<!-- Site-wide seasonal offer bar. Sticks to the bottom on phones so it stays
+     visible while customers scroll the catalogue. -->
+<aside class="promo-bar" data-testid="promo-bar">
+  <div class="shell promo-in">
+    <strong>Free next-day delivery</strong>
+    <span>on every order over &pound;50 this week</span>
+    <small class="promo-small">Offer ends Sunday &middot; UK mainland only &middot; excludes clearance</small>
+    <a class="promo-link" href="/product">Shop the sale</a>
+  </div>
+</aside>
+
+<footer class="foot">
+  <div class="shell">Nimbus Supply &middot; Returns &middot; Help &middot; &copy; 2026</div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Your basket{% endblock %}
+{% block body %}
+<h1 class="h-step">Your basket</h1>
+<section class="panel cart-grid">
+  <div class="line">
+    <span class="line-name">{{ product.name }}</span>
+    <span class="line-sku">{{ product.sku }}</span>
+  </div>
+  <form method="post" action="/cart" class="cart-form">
+    <label class="qty">Quantity
+      <input type="number" name="qty" min="1" max="9" value="{{ cart_qty }}">
+    </label>
+    <div class="totals">
+      <span>Subtotal</span><b>&pound;{{ '%.2f'|format(total) }}</b>
+      <span>Delivery</span><b>Free</b>
+    </div>
+    <button class="btn btn-primary btn-wide" data-testid="primary-action" type="submit">Checkout</button>
+    {% block cart_alt %}{% endblock %}
+  </form>
+</section>
+{% endblock %}

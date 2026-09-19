@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Create your account{% endblock %}
+{% block body %}
+<h1 class="h-step">Create your account</h1>
+<p class="step-note">An account keeps your order history and delivery details together.</p>
+{% if errors %}
+  <div class="alert" data-testid="validation-error">Please complete the highlighted fields.</div>
+{% endif %}
+<form method="post" action="/signup" class="panel form">
+  {% for f in fields %}
+    <label class="field {% if f.name in errors %}bad{% endif %}">
+      <span>{{ f.label }}{% if f.required %} <i>*</i>{% endif %}</span>
+      <input type="{{ f.type }}" name="{{ f.name }}"
+             data-testid="field-{{ f.name }}"
+             {% if f.required %}data-required="true"{% endif %}>
+      {% if f.name in errors %}<em class="err">This field is required</em>{% endif %}
+    </label>
+  {% endfor %}
+  <button class="btn btn-primary btn-wide" data-testid="primary-action" type="submit">Create account &amp; continue</button>
+</form>
+{% endblock %}

@@ -1,0 +1,9 @@
+{
+  "auto_adopt": {
+    "allowed_paths": ["app/templates/**", "app/static/**"],
+    "max_files_changed": 6,
+    "max_lines_changed": 150
+  },
+  "needs_approval_paths": ["app/payment*", "app/models*", "app/pricing*", "app/auth*", "app/server.py"],
+  "protected_paths": ["sim/**", "analyzer/**", "personas/**", "agent/**", "data/**", "orchestrator/**"]
+}

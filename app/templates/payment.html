@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Payment{% endblock %}
+{% block body %}
+<h1 class="h-step">Payment</h1>
+<p class="step-note">You are paying &pound;{{ '%.2f'|format(total) }} including delivery.</p>
+{% if errors %}
+  <div class="alert" data-testid="validation-error">Please complete the highlighted fields.</div>
+{% endif %}
+
+<section class="panel summary">
+  <h2 class="summary-h">Order summary</h2>
+  <div class="summary-row"><span>{{ product.name }} &times; {{ cart_qty }}</span><b>&pound;{{ '%.2f'|format(total) }}</b></div>
+  <div class="summary-row"><span>Next-day delivery</span><b>Free</b></div>
+  <div class="summary-row"><span>VAT included</span><b>&pound;{{ '%.2f'|format(total * 0.2) }}</b></div>
+  <div class="summary-row total"><span>Total due today</span><b>&pound;{{ '%.2f'|format(total) }}</b></div>
+</section>
+
+<form method="post" action="/payment" class="panel form pay-form">
+  {% for f in fields %}
+    <label class="field {% if f.name in errors %}bad{% endif %}">
+      <span>{{ f.label }}{% if f.required %} <i>*</i>{% endif %}</span>
+      <input type="{{ f.type }}" name="{{ f.name }}"
+             data-testid="field-{{ f.name }}"
+             {% if f.required %}data-required="true"{% endif %}>
+      {% if f.name in errors %}<em class="err">This field is required</em>{% endif %}
+    </label>
+  {% endfor %}
+  <p class="terms">By placing this order you agree to the Nimbus Supply terms of sale and
+    confirm the delivery address above is correct. Cards are charged when the parcel leaves
+    our warehouse. We never store full card numbers.</p>
+  <button class="btn btn-primary btn-wide" data-testid="primary-action" type="submit">Pay &pound;{{ '%.2f'|format(total) }}</button>
+</form>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block progress %}{% endblock %}
+{% block body %}
+<section class="detail">
+  <figure class="shot" aria-hidden="true">
+    <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="300" height="300" rx="14" fill="#f4f1ec"/>
+      <path d="M80 240h140" stroke="#c9c2b6" stroke-width="7" stroke-linecap="round"/>
+      <path d="M150 240V110" stroke="#8d8578" stroke-width="8" stroke-linecap="round"/>
+      <path d="M150 110c0-30 24-34 44-34" stroke="#8d8578" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <ellipse cx="200" cy="78" rx="28" ry="16" fill="#e8a33d"/>
+    </svg>
+  </figure>
+  <div class="detail-copy">
+    <h1>{{ product.name }}</h1>
+    <p class="price">&pound;{{ '%.2f'|format(product.price) }}</p>
+    <p class="lede">{{ product.blurb }}</p>
+    <dl class="specs">
+      <dt>SKU</dt><dd>{{ product.sku }}</dd>
+      <dt>Finish</dt><dd>Matte aluminium</dd>
+      <dt>Output</dt><dd>2700–4000K, dimmable</dd>
+    </dl>
+    <form method="get" action="/cart">
+      <button class="btn btn-primary" data-testid="primary-action" type="submit">Add to basket</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

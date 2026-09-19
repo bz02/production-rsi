@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.DS_Store
+*.log
+
+# Run artifacts are reproducible from a seed; keep the tree clean but preserve
+# the directory layout the orchestrator expects.
+data/logs/
+data/runs/
+candidate/
+!data/.gitkeep

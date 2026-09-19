@@ -1,0 +1,184 @@
+/* Nimbus Supply storefront.
+   Plain CSS, no build step, so the agent can edit it directly. */
+
+:root {
+  --ink: #17140f;
+  --body: #4a4438;
+  --muted: #8c8478;
+  --line: #e4ded3;
+  --bg: #fbf9f6;
+  --panel: #ffffff;
+  --brand: #b4651c;
+  --brand-soft: #fdf2e4;
+  --ok: #1f7a4d;
+  --bad: #b3261e;
+  --radius: 12px;
+  --tap: 44px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--body);
+  font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shell { max-width: 940px; margin: 0 auto; padding: 0 20px; }
+
+h1, h2, h3 { color: var(--ink); letter-spacing: -0.02em; }
+
+a { color: var(--brand); }
+
+/* ---------------------------------------------------------------- top bar */
+
+.topbar { background: var(--panel); border-bottom: 1px solid var(--line); }
+.topbar-in { display: flex; align-items: center; gap: 24px; height: 64px; }
+.brand {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-weight: 700; font-size: 16.5px; color: var(--ink); text-decoration: none;
+  letter-spacing: -0.02em;
+}
+.brand .mark {
+  width: 20px; height: 20px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--brand), #e0993f);
+}
+.topnav { margin-left: auto; display: flex; gap: 22px; font-size: 14px; }
+.topnav a { color: var(--body); text-decoration: none; }
+.topnav a:hover { color: var(--ink); }
+.pill {
+  display: inline-block; margin-left: 6px; min-width: 19px; padding: 0 5px;
+  background: var(--brand-soft); color: var(--brand); border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; text-align: center;
+}
+
+/* -------------------------------------------------------------- crumbs */
+
+.crumbs {
+  list-style: none; display: flex; flex-wrap: wrap; gap: 6px 10px;
+  padding: 18px 0 0; margin: 0; font-size: 11.5px; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--muted);
+}
+.crumbs li::after { content: "›"; margin-left: 10px; opacity: 0.55; }
+.crumbs li:last-child::after { content: ""; }
+.crumbs li.on { color: var(--brand); font-weight: 700; }
+
+/* --------------------------------------------------------------- blocks */
+
+main.shell { padding-top: 26px; padding-bottom: 60px; }
+
+.h-step { font-size: 26px; margin: 8px 0 6px; }
+.step-note { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 24px;
+}
+
+.hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 40px; align-items: center; padding: 34px 0 20px; }
+.eyebrow { font-size: 11.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--brand); font-weight: 700; }
+.hero h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.08; margin: 12px 0 14px; }
+.lede { font-size: 16.5px; color: var(--body); max-width: 50ch; margin: 0 0 22px; }
+.ticks { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 7px; font-size: 13.5px; color: var(--muted); }
+.ticks li::before { content: "✓"; color: var(--ok); font-weight: 700; margin-right: 8px; }
+.hero-art svg, .shot svg { width: 100%; height: auto; display: block; border-radius: var(--radius); }
+
+.detail { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 36px; align-items: start; padding-top: 14px; }
+.detail h1 { font-size: 28px; margin: 0 0 6px; }
+.price { font-size: 22px; font-weight: 700; color: var(--ink); margin: 0 0 14px; }
+.specs { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; font-size: 14px; margin: 0 0 24px; }
+.specs dt { color: var(--muted); }
+.specs dd { margin: 0; color: var(--ink); }
+
+.cart-grid { display: grid; gap: 20px; }
+.line { display: grid; gap: 3px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.line-name { font-weight: 650; color: var(--ink); }
+.line-sku { font-size: 12.5px; color: var(--muted); }
+.cart-form { display: grid; gap: 18px; }
+.qty { display: grid; gap: 6px; font-size: 13px; color: var(--muted); max-width: 140px; }
+.qty input { min-height: var(--tap); border: 1px solid var(--line); border-radius: 9px; padding: 0 11px; font: inherit; }
+.totals { display: grid; grid-template-columns: 1fr auto; gap: 8px 20px; font-size: 14.5px; padding-top: 16px; border-top: 1px solid var(--line); }
+.totals b { color: var(--ink); }
+
+/* ---------------------------------------------------------------- forms */
+
+.form { display: grid; gap: 16px; }
+.field { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.field > span i { color: var(--bad); font-style: normal; }
+.field input {
+  min-height: var(--tap); border: 1px solid var(--line); border-radius: 9px;
+  padding: 0 12px; font: inherit; font-size: 14.5px; background: var(--panel); color: var(--ink);
+}
+.field input:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+.field.bad input { border-color: var(--bad); background: #fff7f6; }
+.err { color: var(--bad); font-style: normal; font-size: 12px; }
+.alert {
+  background: #fff7f6; border: 1px solid #f3cfcb; color: var(--bad);
+  border-radius: 10px; padding: 11px 14px; font-size: 13.5px; margin-bottom: 16px;
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: var(--tap); padding: 0 20px; border-radius: 10px; border: 1px solid transparent;
+  font: inherit; font-size: 15px; font-weight: 650; cursor: pointer; text-decoration: none;
+}
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: #9d5817; }
+.btn-ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+.btn-wide { width: 100%; }
+
+.summary { margin-bottom: 18px; }
+.summary-h { font-size: 15px; margin: 0 0 12px; }
+.summary-row { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; font-size: 14px; border-bottom: 1px solid var(--line); }
+.summary-row:last-child { border-bottom: 0; }
+.summary-row b { color: var(--ink); }
+.summary-row.total { padding-top: 12px; margin-top: 4px; border-top: 2px solid var(--line); font-size: 15.5px; }
+.terms { font-size: 12.5px; color: var(--muted); margin: 4px 0 2px; line-height: 1.55; }
+
+.done { text-align: center; display: grid; gap: 10px; justify-items: center; padding: 42px 24px; }
+.done .tick { color: var(--ok); }
+.done h1 { font-size: 26px; margin: 0; }
+
+/* ------------------------------------------------------------ promo bar */
+
+/* The seasonal offer bar. On desktop it sits in the flow under the header; on
+   phones it is pinned to the bottom of the viewport so the offer stays visible
+   while customers scroll long catalogue pages. */
+.promo-bar {
+  background: var(--brand-soft);
+  border-top: 1px solid #f0dcc0;
+  border-bottom: 1px solid #f0dcc0;
+  font-size: 13.5px;
+  z-index: 40;
+}
+.promo-in { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 20px; }
+.promo-in strong { color: var(--brand); }
+.promo-small { color: var(--muted); font-size: 12px; }
+.promo-link { margin-left: auto; font-weight: 650; text-decoration: none; }
+
+.foot { border-top: 1px solid var(--line); padding: 22px 0 34px; color: var(--muted); font-size: 13px; }
+
+/* ------------------------------------------------------------- responsive */
+
+@media (max-width: 720px) {
+  .hero, .detail { grid-template-columns: 1fr; gap: 24px; }
+  .hero { padding-top: 22px; }
+  .topnav { gap: 14px; font-size: 13.5px; }
+}
+
+@media (max-width: 560px) {
+  .promo-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    border-bottom: 0;
+    box-shadow: 0 -6px 18px rgba(23, 20, 15, 0.12);
+  }
+  .promo-in { padding: 16px 20px 20px; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .promo-link { margin-left: 0; }
+  main.shell { padding-bottom: 12px; }
+}

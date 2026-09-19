@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Nimbus Supply — considered desk goods{% endblock %}
+{% block progress %}{% endblock %}
+{% block body %}
+<section class="hero">
+  <div class="hero-copy">
+    <span class="eyebrow">New this season</span>
+    <h1>Desk goods that earn their space</h1>
+    <p class="lede">A short catalogue of things we actually use. Built to last, priced without theatre,
+      delivered in two days.</p>
+    <a class="btn btn-primary" data-testid="primary-action" href="/product">Shop the lamp</a>
+    <ul class="ticks">
+      <li>Two-year warranty</li><li>Free returns for 60 days</li><li>Carbon-neutral delivery</li>
+    </ul>
+  </div>
+  <figure class="hero-art" aria-hidden="true">
+    <svg viewBox="0 0 320 260" xmlns="http://www.w3.org/2000/svg">
+      <rect width="320" height="260" rx="14" fill="#f4f1ec"/>
+      <path d="M96 208h128" stroke="#c9c2b6" stroke-width="6" stroke-linecap="round"/>
+      <path d="M160 208V96" stroke="#8d8578" stroke-width="7" stroke-linecap="round"/>
+      <path d="M160 96c0-26 22-30 40-30" stroke="#8d8578" stroke-width="7" stroke-linecap="round" fill="none"/>
+      <ellipse cx="206" cy="68" rx="26" ry="15" fill="#e8a33d"/>
+      <circle cx="206" cy="82" r="30" fill="#f6d79a" opacity=".45"/>
+    </svg>
+  </figure>
+</section>
+{% endblock %}

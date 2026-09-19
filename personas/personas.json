@@ -1,0 +1,47 @@
+{
+  "personas": [
+    {
+      "id": "impatient_desktop",
+      "device": "desktop", "viewport": [1440, 900],
+      "max_fields_per_form": 5,
+      "prefers_guest": true,
+      "abandon_on_forced_signup_prob": 0.6,
+      "typo_rate": 0.05,
+      "step_delay_ms": [300, 900],
+      "split": "train"
+    },
+    {
+      "id": "novice_mobile",
+      "device": "mobile", "viewport": [390, 844],
+      "max_fields_per_form": 6,
+      "prefers_guest": true,
+      "abandon_on_forced_signup_prob": 0.3,
+      "typo_rate": 0.15,
+      "step_delay_ms": [800, 2000],
+      "split": "train"
+    },
+    {
+      "id": "careful_desktop",
+      "device": "desktop", "viewport": [1280, 800],
+      "max_fields_per_form": 9,
+      "prefers_guest": false,
+      "abandon_on_forced_signup_prob": 0.05,
+      "typo_rate": 0.02,
+      "step_delay_ms": [500, 1500],
+      "split": "train"
+    },
+    {
+      "id": "senior_tablet",
+      "device": "tablet", "viewport": [820, 1180],
+      "max_fields_per_form": 5,
+      "prefers_guest": true,
+      "abandon_on_forced_signup_prob": 0.4,
+      "typo_rate": 0.2,
+      "step_delay_ms": [1000, 2500],
+      "split": "holdout"
+    }
+  ],
+  "train_mix": { "impatient_desktop": 0.35, "novice_mobile": 0.4, "careful_desktop": 0.25 },
+  "abandon_on_too_many_fields_prob": 0.7,
+  "max_blocked_click_retries": 2
+}
