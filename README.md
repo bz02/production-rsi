@@ -167,9 +167,18 @@ bundle.
   → **invalid**, rolled back on principle
 
 So the same loop ships a CSS fix unattended and stops for a human on an auth change.
+Both of those have happened for real: round 2 of the recorded run held a +18.0pp win
+at `p=0.010` until somebody clicked Approve, because the diff touched
+`app/server.py`.
+
 The third rule has never fired in a real round, and that is the point: it is the
 mechanism that would catch an agent editing its own scorer, and there is a test for
-it precisely because it should never fire by accident.
+it precisely because it should never fire by accident. The `invalid` verdict it
+shares with the eval gate *has* fired for real, once, and not by design: a change to
+`sim/smoke.py` mid-run tightened a contract check, the candidate failed the gate, and
+the round was rolled back before a single session ran against it. That is the
+behaviour the gate exists for, arrived at by accident — which is a better test of it
+than anything written on purpose.
 
 One deliberate addition to the frozen policy: `app/server.py` is listed under
 `needs_approval_paths` even though the auto-adopt allowlist already routes it to a
@@ -275,12 +284,13 @@ python analyzer/test_stats.py       # decision arithmetic and policy classificat
 python agent/test_tools.py          # the agent's sandbox
 python agent/test_llm.py            # the model call, and its fallback
 python orchestrator/test_approval.py  # what Approve and Reject actually do
+python orchestrator/test_target.py    # when --target stops, and when it gives up
 python sim/test_gate.py             # the eval gate, against deliberately broken candidates
 ```
 
-The first four need no browser and no server, so they run in CI on every push in a
-few seconds. The fifth runs a browser and gets its own CI job, because the claim it
-checks is not arithmetic.
+The first five need no browser and no server, so they run in CI on every push in a
+few seconds. The last one runs a browser and gets its own CI job, because the claim
+it checks is not arithmetic.
 
 `test_stats.py` is 20 checks over the arithmetic that decides things: the z-test (including the
 interface document's own claim that 30% vs 45% at n=80 lands at p≈0.05), the

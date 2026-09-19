@@ -35,6 +35,9 @@ jobs:
       - name: approve and reject do what they say
         run: python orchestrator/test_approval.py
 
+      - name: --target mode stops at the right moment
+        run: python orchestrator/test_target.py
+
       - name: every module imports cleanly
         run: |
           python -m compileall -q agent analyzer orchestrator sim dashboard app
