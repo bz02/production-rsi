@@ -259,6 +259,24 @@
 
 <section>
   <div class="wrap">
+    <div class="sec-label">When it stops</div>
+    <h2>Round 2 waited for a person, and this is what that looks like</h2>
+    <p class="note">The policy reads the diff, not the intent. Templates and CSS inside the
+      size limits ship unattended; a diff that touches a route does not, however good the
+      number is. Below is the dashboard holding a <b>+18.0pp</b> win at <b>p=0.010</b> — all
+      guardrails green — because <code>app/server.py</code> is in the diff. Nothing reaches the
+      baseline until somebody clicks. Approving promotes that round's exact candidate and
+      records that a human decided; rejecting leaves the baseline untouched.</p>
+    <figure class="shot" style="margin: 20px 0 0">
+      <figcaption><span class="tag before" style="background:rgba(255,182,56,.13);color:var(--warn)">awaiting approval</span>
+        <span>the dashboard, mid-round, with the decision in a person's hands</span></figcaption>
+      <img src="shots/approval.png" alt="The dashboard showing a round awaiting human approval, with Approve and Reject buttons and app/server.py flagged" loading="lazy">
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
     <div class="sec-label">Why the numbers can be trusted</div>
     <h2>The agent cannot reach its own scoring</h2>
     <div class="cols" style="margin-top:20px">
@@ -292,6 +310,12 @@
         <h3>Autonomy is earned per diff</h3>
         <p>Templates and CSS inside the size limits ship unattended. A route change waits for a
           person. An edit to the evaluator is rolled back on principle.</p>
+      </div>
+      <div class="card">
+        <h3>And the gate is tested by breaking things</h3>
+        <p>It has never failed in a real round, so <code>sim/test_gate.py</code> manufactures the
+          failures: a step with no forward action, a 500 mid-funnel, an input the simulator
+          cannot see. Each must be caught by the case that names it.</p>
       </div>
     </div>
   </div>

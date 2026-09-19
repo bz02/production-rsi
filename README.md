@@ -271,14 +271,15 @@ ambiguous.
 ## Tests
 
 ```bash
-python analyzer/test_stats.py   # decision arithmetic and policy classification
-python agent/test_tools.py      # the agent's sandbox
-python agent/test_llm.py        # the model call, and its fallback
-python sim/test_gate.py         # the eval gate, against deliberately broken candidates
+python analyzer/test_stats.py       # decision arithmetic and policy classification
+python agent/test_tools.py          # the agent's sandbox
+python agent/test_llm.py            # the model call, and its fallback
+python orchestrator/test_approval.py  # what Approve and Reject actually do
+python sim/test_gate.py             # the eval gate, against deliberately broken candidates
 ```
 
-The first three need no browser and no server, so they run in CI on every push in a
-few seconds. The fourth runs a browser and gets its own CI job, because the claim it
+The first four need no browser and no server, so they run in CI on every push in a
+few seconds. The fifth runs a browser and gets its own CI job, because the claim it
 checks is not arithmetic.
 
 `test_stats.py` is 20 checks over the arithmetic that decides things: the z-test (including the
@@ -298,6 +299,14 @@ works. It manufactures the failures instead, in temp copies of `app/`: a step wi
 forward action, a 500 mid-funnel, and an input the simulator cannot see. Each one has
 to be caught by the named case that should catch it, and the intact app still has to
 pass.
+
+`orchestrator/test_approval.py` covers the half of the policy that is easy to get
+wrong. Stopping for a human is the easy half; what the button then does is the half
+that matters — approving promotes *that round's* candidate even when `candidate/` has
+since been overwritten by a later round, records that a human decided, and clears the
+pending flag on the chart. Approving twice, approving a rejected round and approving a
+round that does not exist are all refused rather than half-applied, because the button
+lives in a browser and browsers re-send things.
 
 `agent/test_llm.py` covers the model call with a stubbed transport: a good answer is
 used, and a hallucinated hypothesis id, prose with no JSON, truncated JSON, an

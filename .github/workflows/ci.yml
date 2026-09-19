@@ -32,6 +32,9 @@ jobs:
       - name: the model call degrades to the heuristic
         run: python agent/test_llm.py
 
+      - name: approve and reject do what they say
+        run: python orchestrator/test_approval.py
+
       - name: every module imports cleanly
         run: |
           python -m compileall -q agent analyzer orchestrator sim dashboard app
