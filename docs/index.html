@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Self-Improving Growth Agent — run report</title>
+<meta name="description" content="A closed loop that reads its own telemetry, ships one change per round, and proves each one with a live A/B test. Every number here was measured in a real browser.">
+<style>
+  :root {
+    --bg: #080a10;
+    --panel: #0e1220;
+    --panel-2: #141a2b;
+    --line: #1f2739;
+    --line-2: #2b354a;
+    --text: #e9eefa;
+    --muted: #8592ab;
+    --dim: #5f6b82;
+    --accent: #5b8cff;
+    --good: #3ddc91;
+    --warn: #ffb638;
+    --bad: #ff6b6b;
+    /* Chart roles. The two categorical slots are validated against this surface
+       (CVD ΔE 26.8, normal-vision ΔE 31.8); the baseline is a neutral reference
+       series, not a categorical hue, and is also dashed + direct-labelled. */
+    --series-candidate: #3987e5;
+    --series-holdout: #d95926;
+    --series-baseline: #8592ab;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 460px at 12% -12%, rgba(91, 140, 255, 0.11), transparent 70%),
+      radial-gradient(900px 380px at 92% -6%, rgba(217, 89, 38, 0.07), transparent 70%),
+      var(--bg);
+    color: var(--text);
+    font: 15px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 20px; }
+  h1, h2, h3, h4 { letter-spacing: -0.02em; margin: 0; line-height: 1.25; }
+  a { color: var(--accent); }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; }
+  p { margin: 0 0 14px; }
+
+  /* ------------------------------------------------------------------ header */
+  header.top { border-bottom: 1px solid var(--line); padding: 46px 0 34px; }
+  .eyebrow { color: var(--muted); font-size: 12.5px; letter-spacing: 0.14em;
+    text-transform: uppercase; margin-bottom: 14px; }
+  header.top h1 { font-size: clamp(28px, 4.4vw, 42px); max-width: 20ch; }
+  .lede { color: var(--muted); font-size: 17px; max-width: 62ch; margin-top: 16px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .chip { border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+    border-radius: 999px; padding: 6px 13px; font-size: 12.5px; }
+  .chip b { color: var(--text); font-weight: 600; }
+
+  /* ------------------------------------------------------------------- cards */
+  section { padding: 44px 0; border-bottom: 1px solid var(--line); }
+  .sec-label { color: var(--accent); font-size: 12px; letter-spacing: 0.16em;
+    text-transform: uppercase; margin-bottom: 12px; }
+  section h2 { font-size: clamp(21px, 2.6vw, 27px); margin-bottom: 14px; }
+  .note { color: var(--muted); max-width: 68ch; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 24px 0 0; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .kpi b { display: block; font-size: 27px; letter-spacing: -0.03em; }
+  .kpi span { display: block; color: var(--muted); font-size: 11.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; margin-top: 6px; }
+  .kpi.good b { color: var(--good); }
+  .kpi.accent b { color: var(--accent); }
+
+  /* ------------------------------------------------------------------- chart */
+  .chart-card { margin-top: 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 12.5px; margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 22px; height: 0; border-top-width: 2px; border-top-style: solid;
+    vertical-align: middle; margin-right: 7px; }
+  .sw-cand { border-color: var(--series-candidate); }
+  .sw-hold { border-color: var(--series-holdout); border-top-style: dotted; border-top-width: 3px; }
+  .sw-base { border-color: var(--series-baseline); border-top-style: dashed; }
+  .chart { position: relative; }
+  .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .grid-line { stroke: var(--line); stroke-width: 1; }
+  .axis-text { fill: var(--dim); font-size: 11px; font-family: var(--mono); }
+  .round-tick { fill: var(--muted); font-size: 12px; }
+  .line-base { fill: none; stroke: var(--series-baseline); stroke-width: 2; stroke-dasharray: 6 4; }
+  .line-cand { fill: none; stroke: var(--series-candidate); stroke-width: 2; }
+  .line-hold { fill: none; stroke: var(--series-holdout); stroke-width: 2; stroke-dasharray: 2 4; }
+  .connector { stroke: var(--series-candidate); stroke-width: 1.5; opacity: 0.45; }
+  .dot-base { fill: var(--series-baseline); stroke: var(--panel); stroke-width: 2; }
+  .dot-cand { fill: var(--series-candidate); stroke: var(--panel); stroke-width: 2; }
+  .dot-hold { fill: var(--series-holdout); stroke: var(--panel); stroke-width: 2; }
+  .label { fill: var(--text); font-size: 12.5px; font-weight: 600; }
+  .label-muted { fill: var(--muted); font-size: 12px; }
+  .adopt-mark { fill: var(--good); }
+  .adopt-text { fill: var(--good); font-size: 10.5px; letter-spacing: 0.1em; font-family: var(--mono); }
+  .crosshair { stroke: var(--line-2); stroke-width: 1; }
+  .hit { fill: transparent; cursor: crosshair; }
+  .tip { position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--line-2);
+    border-radius: 10px; padding: 10px 12px; font-size: 12.5px; min-width: 180px;
+    box-shadow: 0 18px 40px -20px #000; opacity: 0; transition: opacity 0.12s; }
+  .tip.on { opacity: 1; }
+  .tip h4 { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .tip .row { display: flex; justify-content: space-between; gap: 18px; }
+  .tip .row i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .tip .k { color: var(--muted); }
+  .tip .v { font-family: var(--mono); }
+
+  details.table-view { margin-top: 16px; }
+  details.table-view summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin-top: 12px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+  td.num, th.num { text-align: right; font-family: var(--mono); }
+
+  /* ------------------------------------------------------------------ rounds */
+  .round { border: 1px solid var(--line); border-radius: 16px; background: var(--panel);
+    margin-bottom: 22px; overflow: hidden; }
+  .round.adopted { border-left: 3px solid var(--good); }
+  .round.human { border-left: 3px solid var(--warn); }
+  .r-head { padding: 20px 22px; border-bottom: 1px solid var(--line);
+    display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .r-head .idx { font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+    border: 1px solid var(--line-2); border-radius: 7px; padding: 4px 9px; margin-top: 2px; }
+  .r-head h3 { font-size: 19px; }
+  .r-head .sub { color: var(--muted); font-size: 12.5px; margin-top: 5px; }
+  .pill { margin-left: auto; border-radius: 999px; padding: 6px 13px; font-size: 12px; font-weight: 600;
+    border: 1px solid; white-space: nowrap; }
+  .pill.good { color: var(--good); border-color: rgba(61,220,145,.35); background: rgba(61,220,145,.1); }
+  .pill.warn { color: var(--warn); border-color: rgba(255,182,56,.35); background: rgba(255,182,56,.1); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    border-bottom: 1px solid var(--line); }
+  .stat { padding: 15px 18px; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: 0; }
+  .stat b { display: block; font-size: 19px; font-family: var(--mono); letter-spacing: -0.02em; }
+  .stat span { display: block; color: var(--muted); font-size: 11px; letter-spacing: 0.07em;
+    text-transform: uppercase; margin-top: 4px; }
+  .stat.up b { color: var(--good); }
+  .r-body { padding: 20px 22px; }
+  .r-body > * + * { margin-top: 22px; }
+  .h4 { font-size: 11.5px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 10px; }
+  .quote { border-left: 2px solid var(--line-2); padding-left: 14px; color: var(--muted); }
+  .verdict { border-radius: 10px; padding: 13px 15px; font-size: 14px; }
+  .verdict.good { background: rgba(61,220,145,.08); border: 1px solid rgba(61,220,145,.25); }
+  .verdict.warn { background: rgba(255,182,56,.08); border: 1px solid rgba(255,182,56,.25); }
+  .paths { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .paths code { border: 1px solid var(--line-2); border-radius: 7px; padding: 3px 8px; color: var(--muted); }
+  .paths code.flag { color: var(--warn); border-color: rgba(255,182,56,.4); }
+  .gate { display: grid; gap: 7px; }
+  .case { display: grid; grid-template-columns: auto 1fr auto; gap: 3px 10px; align-items: baseline;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px;
+    padding: 9px 12px; font-size: 13px; }
+  .case i { color: var(--good); font-style: normal; }
+  .case .kind { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+  .case .detail { grid-column: 2 / -1; color: var(--dim); font-family: var(--mono); font-size: 11.5px;
+    overflow-x: auto; }
+  pre.diff { background: #0a0d16; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; margin: 0; font-family: var(--mono); font-size: 12px; line-height: 1.6; }
+  pre.diff span { display: block; white-space: pre; }
+  .d-hdr { color: var(--dim); }
+  .d-hunk { color: var(--accent); }
+  .d-add { color: var(--good); }
+  .d-del { color: var(--bad); }
+  .d-ctx { color: var(--muted); }
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .shot { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel-2); }
+  .shot figcaption { padding: 9px 12px; font-size: 11.5px; color: var(--muted);
+    border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+  .shot .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    border-radius: 5px; padding: 2px 7px; }
+  .tag.before { background: rgba(255,107,107,.13); color: var(--bad); }
+  .tag.after { background: rgba(61,220,145,.13); color: var(--good); }
+  .shot img { display: block; width: 100%; height: auto; }
+  .hyp-sel { color: var(--accent); font-weight: 600; }
+
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .cols .card h3 { font-size: 15px; margin-bottom: 8px; }
+  .cols .card p { color: var(--muted); font-size: 13.5px; margin: 0; }
+
+  pre.cmd { background: #0a0d16; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+    overflow-x: auto; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  pre.cmd b { color: var(--text); font-weight: 500; }
+
+  footer { padding: 34px 0 60px; color: var(--dim); font-size: 13px; }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 720px) {
+    .shots { grid-template-columns: 1fr; }
+    .stat { border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">Run report · seed 7 · generated 2026-09-19</div>
+    <h1>An agent that improves a checkout funnel, and proves it</h1>
+    <p class="lede">Each round it reads the previous round's telemetry, proposes several
+      hypotheses, implements exactly one, and has to clear an eval gate before a single
+      simulated customer sees it. Then both versions run side by side and a two-proportion
+      z-test decides what survives. Every number on this page came out of a real browser
+      session against a real server.</p>
+    <div class="meta" id="meta"></div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label">The result</div>
+    <h2>Three rounds, three shipped changes, each one measured</h2>
+    <div class="kpis" id="kpis"></div>
+
+    <div class="card chart-card" style="margin-top:22px">
+      <div class="legend">
+        <span><i class="sw-base"></i>baseline (control arm)</span>
+        <span><i class="sw-cand"></i>candidate (treatment arm)</span>
+        <span><i class="sw-hold"></i>holdout personas</span>
+      </div>
+      <div class="chart" id="chart"></div>
+      <details class="table-view">
+        <summary>Show the numbers as a table</summary>
+        <div id="dataTable"></div>
+      </details>
+    </div>
+    <p class="note" style="margin-top:16px" id="ceiling"></p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label">Where it started</div>
+    <h2>A funnel with three planted defects</h2>
+    <p class="note">Each defect is the kind that looks reasonable to somebody: a form that
+      asks for everything at once, a login wall in front of the money, and a promotional bar
+      that covers the button it is promoting. The agent is told none of this — it sees only
+      a summary of the logs.</p>
+    <div class="cols" style="margin-top:20px" id="defects"></div>
+    <div class="card" style="margin-top:16px">
+      <div class="h4">Round 0 · the untouched baseline</div>
+      <div id="funnel0"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label">Round by round</div>
+    <h2>What it changed, and what the statistics said</h2>
+    <p class="note">One hypothesis per round, so a lift belongs to a single named change
+      rather than a bundle. The diffs below are the round's real <code>diff.patch</code>;
+      the gate results are its real <code>smoke.json</code>.</p>
+    <div id="rounds" style="margin-top:22px"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label">Why the numbers can be trusted</div>
+    <h2>The agent cannot reach its own scoring</h2>
+    <div class="cols" style="margin-top:20px">
+      <div class="card">
+        <h3>It cannot write outside its sandbox</h3>
+        <p><code>write_file</code> resolves every path and refuses anything outside
+          <code>candidate/</code> — traversal, absolute paths and symlinks included. There is a
+          test for each escape.</p>
+      </div>
+      <div class="card">
+        <h3>And the analyzer re-checks anyway</h3>
+        <p>A separate process re-reads the round's diff against <code>protected_paths</code> and
+          marks the round <code>invalid</code> on a hit. Two enforcement points, two processes.</p>
+      </div>
+      <div class="card">
+        <h3>The decision is arithmetic</h3>
+        <p>Smoke failed or protected path touched → invalid. Error rate up &gt;2pp → rollback.
+          Lift &gt; 0 and p &lt; 0.10 → adopt, or wait for a human per policy. No model input.</p>
+      </div>
+      <div class="card">
+        <h3>The app never writes its telemetry</h3>
+        <p>The simulator does, from outside the tree the agent may edit, so an agent cannot
+          improve its own numbers by touching instrumentation.</p>
+      </div>
+      <div class="card">
+        <h3>Holdout personas</h3>
+        <p>A tablet persona never appears in the agent's summary and never influences a
+          decision. It is reported separately as an overfitting check.</p>
+      </div>
+      <div class="card">
+        <h3>Autonomy is earned per diff</h3>
+        <p>Templates and CSS inside the size limits ship unattended. A route change waits for a
+          person. An edit to the evaluator is rolled back on principle.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-label">Reproduce it</div>
+    <h2>The whole run is one command</h2>
+    <pre class="cmd"><b>pip install flask playwright &amp;&amp; playwright install chromium</b>
+<b>python orchestrator/run_loop.py --rounds 3 --n 200 --seed 7 --auto-approve --reset</b>
+<b>python dashboard/server.py</b>        # the live dashboard, http://127.0.0.1:8080</pre>
+    <p class="note" style="margin-top:14px">The seed is fixed, so the run reproduces exactly —
+      same personas, same order, same assignment, and the same result at any
+      <code>--workers</code> setting, because each session draws from a seed derived from its own
+      index. <span id="runtime"></span></p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Generated from the run's own artifacts by <code>docs/build_report.py</code> —
+    metrics, diffs, gate results and screenshots, nothing hand-typed.
+    <a id="repoLink" href="#">Source on GitHub</a>
+  </div>
+</footer>
+
+<script>
+const DATA = {"generated":"2026-09-19","repo":"https://github.com/bz02/production-rsi","seed":7,"n_per_arm":200,"sessions":1400,"baseline":0.285,"final":1.0,"total_rel":2.508771929824562,"adopted":3,"rounds_run":3,"funnel0":[{"step":"landing","reached":200,"dropped":0,"drop_rate":0.0},{"step":"product","reached":200,"dropped":0,"drop_rate":0.0},{"step":"cart","reached":200,"dropped":0,"drop_rate":0.0},{"step":"signup","reached":200,"dropped":128,"drop_rate":0.64},{"step":"shipping","reached":72,"dropped":0,"drop_rate":0.0},{"step":"payment","reached":72,"dropped":15,"drop_rate":0.2083},{"step":"confirmation","reached":57,"dropped":0,"drop_rate":0.0}],"friction0":[{"type":"abandon_reason","value":"too_many_fields","count":113,"step":"signup","field_count":8},{"type":"abandon_reason","value":"forced_signup","count":15,"step":"signup"},{"type":"abandon_reason","value":"blocked","count":15,"step":"payment"},{"type":"blocked_click","value":"click_intercepted","count":15,"step":"payment","device":"mobile"},{"type":"validation_error","value":"field_rejected","count":2,"step":"shipping"}],"persona0":{"careful_desktop":{"n":44,"conversion_rate":1.0,"device":"desktop"},"novice_mobile":{"n":77,"conversion_rate":0.0,"device":"mobile"},"impatient_desktop":{"n":79,"conversion_rate":0.1646,"device":"desktop"}},"holdout0":0.22,"series":[{"round":0,"control":0.285,"treatment":null,"holdout_control":0.22,"holdout_treatment":null,"adopted":false},{"round":1,"control":0.3,"treatment":0.41,"holdout_control":0.14,"holdout_treatment":0.52,"adopted":true},{"round":2,"control":0.35,"treatment":0.615,"holdout_control":0.66,"holdout_treatment":1.0,"adopted":true},{"round":3,"control":0.615,"treatment":1.0,"holdout_control":1.0,"holdout_treatment":1.0,"adopted":true}],"rounds":[{"round":1,"title":"Cut the signup form to four fields","hypothesis_id":"h_trim_signup","selection_mode":"heuristic","status":"adopted","autonomy":"auto","control":0.3,"control_n":200,"control_conv":60,"treatment":0.41,"treatment_n":200,"treatment_conv":82,"lift_abs":0.11,"lift_rel":0.3667,"p_value":0.0215,"ci95":[0.0168,0.2032],"decision":"adopt","decision_reason":"Conversion +11.0% (p=0.021), guardrails pass, diff touches 1 file(s), 4 line(s) \u2014 inside the auto-adopt policy.","files":["app/templates/signup.html"],"files_changed":1,"lines_changed":4,"needs_approval":[],"protected":false,"guardrails":{"smoke_test":true,"http_error_delta":0.0,"protected_paths_touched":false,"pass":true},"hypotheses":[{"id":"h_trim_signup","title":"Cut the signup form to four fields","evidence":"The form asks for nine fields before anyone may pay. Personas abandon when a single form exceeds what they will tolerate, and the extra five fields are not needed to take an order. Observed: 113 sessions at step 'signup' (8 fields shown)","expected_impact":"high","risk":"low","files":["app/templates/signup.html"],"friction_sessions":113,"already_shipped":false,"selected":true},{"id":"h_guest_checkout","title":"Add a guest checkout path","evidence":"Checkout is gated behind account creation with no way around it. Shoppers who do not want an account currently have nowhere to go but away. Observed: 15 sessions at step 'signup'","expected_impact":"high","risk":"medium","files":["app/templates/signup.html","app/server.py"],"friction_sessions":15,"already_shipped":false,"selected":false},{"id":"h_fix_mobile_tap","title":"Stop the offer bar covering the pay button on phones","evidence":"Clicks on the forward action are being intercepted on small viewports. The pinned pay bar overlaps the end of the page because no space is reserved for its height, so the button cannot be tapped at all. Observed: 15 sessions at step 'payment' on mobile","expected_impact":"high","risk":"low","files":["app/static/app.css"],"friction_sessions":15,"already_shipped":false,"selected":false}],"smoke":{"passed":true,"cases":[{"case":"landing page responds","kind":"contract","passed":true,"detail":"GET / -> 200"},{"case":"no 5xx responses during the journey","kind":"contract","passed":true,"detail":"clean"},{"case":"DOM contract holds on every step","kind":"contract","passed":true,"detail":"checked 7 distinct step(s)"},{"case":"perfect desktop user reaches confirmation","kind":"journey","passed":true,"detail":"landing -> product -> cart -> signup -> shipping -> payment -> confirmation"},{"case":"funnel completes in a reasonable number of steps","kind":"journey","passed":true,"detail":"7 steps"}],"pass_count":5,"case_count":5,"steps_visited":["landing","product","cart","signup","shipping","payment","confirmation"],"reached_confirmation":true,"duration_s":0.82},"diff":[{"k":"hdr","t":"diff -ru --exclude=__pycache__ --exclude=*.pyc app/templates/signup.html candidate/templates/signup.html"},{"k":"hdr","t":"--- app/templates/signup.html\t2026-09-19 14:48:09"},{"k":"hdr","t":"+++ candidate/templates/signup.html\t2026-09-19 14:49:13"},{"k":"hunk","t":"@@ -2,12 +2,12 @@"},{"k":"ctx","t":" {% block title %}Create your account{% endblock %}"},{"k":"ctx","t":" {% block body %}"},{"k":"ctx","t":" \u003ch1 class=\"h-step\">Create your account\u003c/h1>"},{"k":"del","t":"-\u003cp class=\"step-note\">An account keeps your order history and delivery details together.\u003c/p>"},{"k":"add","t":"+\u003cp class=\"step-note\">Four details and you are done &mdash; everything else can wait until later.\u003c/p>"},{"k":"ctx","t":" {% if errors %}"},{"k":"ctx","t":"   \u003cdiv class=\"alert\" data-testid=\"validation-error\">Please complete the highlighted fields.\u003c/div>"},{"k":"ctx","t":" {% endif %}"},{"k":"ctx","t":" \u003cform method=\"post\" action=\"/signup\" class=\"panel form\">"},{"k":"del","t":"-  {% for f in fields %}"},{"k":"add","t":"+  {% for f in fields[:4] %}"},{"k":"ctx","t":"     \u003clabel class=\"field {% if f.name in errors %}bad{% endif %}\">"},{"k":"ctx","t":"       \u003cspan>{{ f.label }}{% if f.required %} \u003ci>*\u003c/i>{% endif %}\u003c/span>"},{"k":"ctx","t":"       \u003cinput type=\"{{ f.type }}\" name=\"{{ f.name }}\""}],"rationale":"Selected by observed friction volume: 113 sessions were lost to this cause in the round just analysed, more than any other single cause the playbook can address.","holdout":{"control":0.14,"treatment":0.52},"shots":{"caption":["signup, desktop","nine required fields","four"],"before":"shots/r1_before.png","after":"shots/r1_after.png"}},{"round":2,"title":"Add a guest checkout path","hypothesis_id":"h_guest_checkout","selection_mode":"heuristic","status":"adopted","autonomy":"pending_approval","control":0.35,"control_n":200,"control_conv":70,"treatment":0.615,"treatment_n":200,"treatment_conv":123,"lift_abs":0.265,"lift_rel":0.7571,"p_value":0.0,"ci95":[0.1706,0.3594],"decision":"pending_approval","decision_reason":"Conversion +26.5% (p=0.000) and guardrails pass, but human approval is required: touches app/server.py; outside the auto-adopt allowlist: app/server.py.","files":["app/server.py","app/static/app.css","app/templates/signup.html"],"files_changed":3,"lines_changed":15,"needs_approval":["app/server.py"],"protected":false,"guardrails":{"smoke_test":true,"http_error_delta":0.0,"protected_paths_touched":false,"pass":true},"hypotheses":[{"id":"h_guest_checkout","title":"Add a guest checkout path","evidence":"Checkout is gated behind account creation with no way around it. Shoppers who do not want an account currently have nowhere to go but away. Observed: 69 sessions at step 'signup'","expected_impact":"high","risk":"medium","files":["app/templates/signup.html","app/server.py"],"friction_sessions":69,"already_shipped":false,"selected":true},{"id":"h_fix_mobile_tap","title":"Stop the offer bar covering the pay button on phones","evidence":"Clicks on the forward action are being intercepted on small viewports. The pinned pay bar overlaps the end of the page because no space is reserved for its height, so the button cannot be tapped at all. Observed: 49 sessions at step 'payment' on mobile","expected_impact":"high","risk":"low","files":["app/static/app.css"],"friction_sessions":49,"already_shipped":false,"selected":false},{"id":"h_trim_signup","title":"Cut the signup form to four fields","evidence":"The form asks for nine fields before anyone may pay. Personas abandon when a single form exceeds what they will tolerate, and the extra five fields are not needed to take an order. Not observed in this round's logs.","expected_impact":"high","risk":"low","files":["app/templates/signup.html"],"friction_sessions":0,"already_shipped":true,"selected":false}],"smoke":{"passed":true,"cases":[{"case":"landing page responds","kind":"contract","passed":true,"detail":"GET / -> 200"},{"case":"no 5xx responses during the journey","kind":"contract","passed":true,"detail":"clean"},{"case":"DOM contract holds on every step","kind":"contract","passed":true,"detail":"checked 7 distinct step(s)"},{"case":"perfect desktop user reaches confirmation","kind":"journey","passed":true,"detail":"landing -> product -> cart -> signup -> shipping -> payment -> confirmation"},{"case":"funnel completes in a reasonable number of steps","kind":"journey","passed":true,"detail":"7 steps"}],"pass_count":5,"case_count":5,"steps_visited":["landing","product","cart","signup","shipping","payment","confirmation"],"reached_confirmation":true,"duration_s":0.79},"diff":[{"k":"hdr","t":"diff -ru --exclude=__pycache__ --exclude=*.pyc app/server.py candidate/server.py"},{"k":"hdr","t":"--- app/server.py\t2026-09-19 14:48:09"},{"k":"hdr","t":"+++ candidate/server.py\t2026-09-19 14:52:34"},{"k":"hunk","t":"@@ -128,6 +128,14 @@"},{"k":"ctx","t":"     return render_template(\"signup.html\", **_ctx(\"signup\", fields=SIGNUP_FIELDS, errors=errors))"},{"k":"ctx","t":" "},{"k":"ctx","t":" "},{"k":"add","t":"+@app.route(\"/guest\")"},{"k":"add","t":"+def guest():"},{"k":"add","t":"+    \"\"\"Guest checkout. Requiring an account before payment was costing more orders"},{"k":"add","t":"+    than the account itself was worth; the customer can register after paying.\"\"\""},{"k":"add","t":"+    session[\"guest\"] = True"},{"k":"add","t":"+    return redirect(url_for(\"shipping\"))"},{"k":"add","t":"+"},{"k":"add","t":"+"},{"k":"ctx","t":" @app.route(\"/shipping\", methods=[\"GET\", \"POST\"])"},{"k":"ctx","t":" def shipping():"},{"k":"ctx","t":"     errors: list[str] = []"},{"k":"hdr","t":"diff -ru --exclude=__pycache__ --exclude=*.pyc app/static/app.css candidate/static/app.css"},{"k":"hdr","t":"--- app/static/app.css\t2026-09-19 14:48:09"},{"k":"hdr","t":"+++ candidate/static/app.css\t2026-09-19 14:52:34"},{"k":"hunk","t":"@@ -196,3 +196,6 @@"},{"k":"ctx","t":"   .paybar-note { font-size: 12px; color: var(--muted); }"},{"k":"ctx","t":"   .paybar-note strong { color: var(--ok); font-weight: 650; }"},{"k":"ctx","t":" }"},{"k":"add","t":"+"},{"k":"add","t":"+.guest-row { display: grid; gap: 6px; margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }"},{"k":"add","t":"+.guest-note { font-size: 12.5px; color: var(--muted); margin: 0; text-align: center; }"},{"k":"hdr","t":"diff -ru --exclude=__pycache__ --exclude=*.pyc app/templates/signup.html candidate/templates/signup.html"},{"k":"hdr","t":"--- app/templates/signup.html\t2026-09-19 14:49:13"},{"k":"hdr","t":"+++ candidate/templates/signup.html\t2026-09-19 14:52:34"},{"k":"hunk","t":"@@ -6,6 +6,10 @@"},{"k":"ctx","t":" {% if errors %}"},{"k":"ctx","t":"   \u003cdiv class=\"alert\" data-testid=\"validation-error\">Please complete the highlighted fields.\u003c/div>"},{"k":"ctx","t":" {% endif %}"},{"k":"add","t":"+\u003cdiv class=\"guest-row\">"},{"k":"add","t":"+  \u003ca class=\"btn btn-ghost btn-wide\" data-testid=\"guest-checkout\" href=\"/guest\">Continue as guest\u003c/a>"},{"k":"add","t":"+  \u003cp class=\"guest-note\">No account needed. You can create one after checkout.\u003c/p>"},{"k":"add","t":"+\u003c/div>"},{"k":"ctx","t":" \u003cform method=\"post\" action=\"/signup\" class=\"panel form\">"},{"k":"ctx","t":"   {% for f in fields[:4] %}"},{"k":"ctx","t":"     \u003clabel class=\"field {% if f.name in errors %}bad{% endif %}\">"}],"rationale":"Selected by observed friction volume: 69 sessions were lost to this cause in the round just analysed, more than any other single cause the playbook can address.","holdout":{"control":0.66,"treatment":1.0},"shots":{"caption":["signup, phone","an account or nothing","a guest path above the form"],"before":"shots/r2_before.png","after":"shots/r2_after.png"}},{"round":3,"title":"Stop the offer bar covering the pay button on phones","hypothesis_id":"h_fix_mobile_tap","selection_mode":"heuristic","status":"adopted","autonomy":"auto","control":0.615,"control_n":200,"control_conv":123,"treatment":1.0,"treatment_n":200,"treatment_conv":200,"lift_abs":0.385,"lift_rel":0.626,"p_value":0.0,"ci95":[0.3176,0.4524],"decision":"adopt","decision_reason":"Conversion +38.5% (p=0.000), guardrails pass, diff touches 1 file(s), 6 line(s) \u2014 inside the auto-adopt policy.","files":["app/static/app.css"],"files_changed":1,"lines_changed":6,"needs_approval":[],"protected":false,"guardrails":{"smoke_test":true,"http_error_delta":0.0,"protected_paths_touched":false,"pass":true},"hypotheses":[{"id":"h_fix_mobile_tap","title":"Stop the offer bar covering the pay button on phones","evidence":"Clicks on the forward action are being intercepted on small viewports. The pinned pay bar overlaps the end of the page because no space is reserved for its height, so the button cannot be tapped at all. Observed: 55 sessions at step 'payment' on mobile","expected_impact":"high","risk":"low","files":["app/static/app.css"],"friction_sessions":55,"already_shipped":false,"selected":true},{"id":"h_guest_checkout","title":"Add a guest checkout path","evidence":"Checkout is gated behind account creation with no way around it. Shoppers who do not want an account currently have nowhere to go but away. Observed: 75 sessions at step 'signup'","expected_impact":"high","risk":"medium","files":["app/templates/signup.html","app/server.py"],"friction_sessions":75,"already_shipped":true,"selected":false},{"id":"h_trim_signup","title":"Cut the signup form to four fields","evidence":"The form asks for nine fields before anyone may pay. Personas abandon when a single form exceeds what they will tolerate, and the extra five fields are not needed to take an order. Not observed in this round's logs.","expected_impact":"high","risk":"low","files":["app/templates/signup.html"],"friction_sessions":0,"already_shipped":true,"selected":false}],"smoke":{"passed":true,"cases":[{"case":"landing page responds","kind":"contract","passed":true,"detail":"GET / -> 200"},{"case":"no 5xx responses during the journey","kind":"contract","passed":true,"detail":"clean"},{"case":"DOM contract holds on every step","kind":"contract","passed":true,"detail":"checked 7 distinct step(s)"},{"case":"perfect desktop user reaches confirmation","kind":"journey","passed":true,"detail":"landing -> product -> cart -> signup -> shipping -> payment -> confirmation"},{"case":"funnel completes in a reasonable number of steps","kind":"journey","passed":true,"detail":"7 steps"}],"pass_count":5,"case_count":5,"steps_visited":["landing","product","cart","signup","shipping","payment","confirmation"],"reached_confirmation":true,"duration_s":0.77},"diff":[{"k":"hdr","t":"diff -ru --exclude=__pycache__ --exclude=*.pyc app/static/app.css candidate/static/app.css"},{"k":"hdr","t":"--- app/static/app.css\t2026-09-19 14:52:34"},{"k":"hdr","t":"+++ candidate/static/app.css\t2026-09-19 14:57:45"},{"k":"hunk","t":"@@ -179,6 +179,12 @@"},{"k":"ctx","t":" .paybar { display: none; }"},{"k":"ctx","t":" "},{"k":"ctx","t":" @media (max-width: 560px) {"},{"k":"add","t":"+  /* The pay bar is pinned, so the page has to reserve its height. Without this"},{"k":"add","t":"+     the last element on the page \u2014 the pay button itself \u2014 sits underneath it and"},{"k":"add","t":"+     cannot be tapped at all. */"},{"k":"add","t":"+  :root { --paybar-h: 132px; }"},{"k":"add","t":"+  body[data-step=\"payment\"] { padding-bottom: var(--paybar-h); }"},{"k":"add","t":"+"},{"k":"ctx","t":"   .paybar {"},{"k":"ctx","t":"     display: block;"},{"k":"ctx","t":"     position: fixed;"}],"rationale":"Selected by observed friction volume: 55 sessions were lost to this cause in the round just analysed, more than any other single cause the playbook can address.","holdout":{"control":1.0,"treatment":1.0},"shots":{"caption":["payment, phone, scrolled to the end","the pay button is underneath the pinned bar","it is above it"],"before":"shots/r3_before.png","after":"shots/r3_after.png"}}]};
+
+const pct = (v, d = 1) => (v == null ? '–' : `${(v * 100).toFixed(d)}%`);
+const pp = (v, d = 1) => (v == null ? '–' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(d)}pp`);
+const pval = (p) => (p == null ? '–' : p < 0.001 ? '<0.001' : p.toFixed(3));
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+};
+
+/* ------------------------------------------------------------------ header */
+
+document.getElementById('repoLink').href = DATA.repo;
+document.getElementById('meta').replaceChildren(...[
+  [`${DATA.sessions.toLocaleString()}`, 'real browser sessions'],
+  [`${DATA.n_per_arm}`, 'sessions per arm'],
+  [`${DATA.rounds_run}`, 'rounds'],
+  ['two-proportion z-test', 'decision rule'],
+].map(([v, k]) => {
+  const c = el('span', 'chip');
+  c.append(el('b', null, v), document.createTextNode(' ' + k));
+  return c;
+}));
+
+document.getElementById('kpis').replaceChildren(...[
+  ['baseline at round 0', pct(DATA.baseline), ''],
+  ['after three rounds', pct(DATA.final), 'good'],
+  ['relative gain', `+${(DATA.total_rel * 100).toFixed(0)}%`, 'accent'],
+  ['changes adopted', `${DATA.adopted}/${DATA.rounds_run}`, ''],
+  ['rolled back', `${DATA.rounds_run - DATA.adopted}`, ''],
+].map(([label, value, cls]) => {
+  const d = el('div', `kpi ${cls}`.trim());
+  d.append(el('b', null, value), el('span', null, label));
+  return d;
+}));
+
+document.getElementById('ceiling').textContent =
+  `The run ends at ${pct(DATA.final, 0)} because this simulated population has exactly three `
+  + `reasons to leave and the loop removed all three — there is nobody left to lose. The numbers `
+  + `to read are the per-round lifts and their p-values, not the ceiling.`;
+
+/* ------------------------------------------------------------------- chart */
+
+function renderChart() {
+  const host = document.getElementById('chart');
+  const s = DATA.series;
+  const W = 1000, H = 380, padL = 52, padR = 92, padT = 28, padB = 66;
+  const vals = s.flatMap((p) => [p.control, p.treatment, p.holdout_control, p.holdout_treatment])
+    .filter((v) => v != null);
+  const maxV = Math.min(1, Math.ceil((Math.max(...vals) * 1.1) / 0.2) * 0.2);
+  const x = (i) => padL + (i * (W - padL - padR)) / (s.length - 1);
+  const y = (v) => H - padB - (v / maxV) * (H - padT - padB);
+
+  const parts = [];
+  for (let t = 0; t <= Math.round(maxV / 0.2); t++) {
+    const v = t * 0.2;
+    parts.push(`<line class="grid-line" x1="${padL}" y1="${y(v)}" x2="${W - padR}" y2="${y(v)}"/>`);
+    parts.push(`<text class="axis-text" x="${padL - 12}" y="${y(v) + 4}" text-anchor="end">${(v * 100).toFixed(0)}%</text>`);
+  }
+
+  // within-round connector: control -> candidate is the experiment's own comparison
+  s.forEach((p, i) => {
+    if (p.treatment == null) return;
+    parts.push(`<line class="connector" x1="${x(i)}" y1="${y(p.control)}" x2="${x(i)}" y2="${y(p.treatment)}"/>`);
+  });
+
+  const path = (key) => s.map((p, i) => (p[key] == null ? null : `${x(i)},${y(p[key])}`))
+    .filter(Boolean).join(' ');
+  const holdPts = s.map((p, i) => {
+    const v = p.holdout_treatment ?? p.holdout_control;
+    return v == null ? null : `${x(i)},${y(v)}`;
+  }).filter(Boolean).join(' ');
+
+  parts.push(`<polyline class="line-hold" points="${holdPts}"/>`);
+  parts.push(`<polyline class="line-base" points="${path('control')}"/>`);
+  parts.push(`<polyline class="line-cand" points="${path('treatment')}"/>`);
+
+  s.forEach((p, i) => {
+    const hv = p.holdout_treatment ?? p.holdout_control;
+    if (hv != null) parts.push(`<circle class="dot-hold" cx="${x(i)}" cy="${y(hv)}" r="4.5"/>`);
+    parts.push(`<circle class="dot-base" cx="${x(i)}" cy="${y(p.control)}" r="5"/>`);
+    if (p.treatment != null) parts.push(`<circle class="dot-cand" cx="${x(i)}" cy="${y(p.treatment)}" r="5.5"/>`);
+    parts.push(`<text class="round-tick" x="${x(i)}" y="${H - padB + 24}" text-anchor="middle">round ${p.round}</text>`);
+    if (p.adopted) {
+      parts.push(`<rect class="adopt-mark" x="${x(i) - 20}" y="${H - padB + 34}" width="40" height="3" rx="1.5"/>`);
+      parts.push(`<text class="adopt-text" x="${x(i)}" y="${H - padB + 50}" text-anchor="middle">ADOPTED</text>`);
+    }
+  });
+
+  // Direct labels on the last point of each series, so identity is never colour-alone.
+  const last = s[s.length - 1];
+  const lastHold = last.holdout_treatment ?? last.holdout_control;
+  parts.push(`<text class="label" x="${x(s.length - 1) + 12}" y="${y(last.treatment ?? last.control) + 4}">${pct(last.treatment ?? last.control, 0)} candidate</text>`);
+  parts.push(`<text class="label-muted" x="${x(s.length - 1) + 12}" y="${y(last.control) + 18}">${pct(last.control, 0)} baseline</text>`);
+  if (lastHold != null && Math.abs(y(lastHold) - y(last.treatment ?? 0)) > 14) {
+    parts.push(`<text class="label-muted" x="${x(s.length - 1) + 12}" y="${y(lastHold) + 4}">${pct(lastHold, 0)} holdout</text>`);
+  }
+  // First point carries a label too: it is the number everything else is measured against.
+  parts.push(`<text class="label-muted" x="${x(0) + 10}" y="${y(s[0].control) - 12}">${pct(s[0].control, 0)} at start</text>`);
+
+  // hover targets
+  s.forEach((p, i) => {
+    const w = (W - padL - padR) / (s.length - 1);
+    parts.push(`<rect class="hit" data-i="${i}" x="${x(i) - w / 2}" y="${padT - 10}" width="${w}" height="${H - padT - padB + 20}"/>`);
+  });
+  parts.push(`<line class="crosshair" id="cross" x1="0" y1="${padT - 10}" x2="0" y2="${H - padB}" opacity="0"/>`);
+
+  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="Conversion rate by round: baseline, candidate and holdout arms">${parts.join('')}</svg>
+    <div class="tip" id="tip"></div>`;
+
+  const svg = host.querySelector('svg');
+  const tip = document.getElementById('tip');
+  const cross = document.getElementById('cross');
+  const round = (i) => DATA.rounds.find((r) => r.round === s[i].round);
+
+  svg.querySelectorAll('.hit').forEach((hit) => {
+    hit.addEventListener('mouseenter', () => {
+      const i = +hit.dataset.i;
+      const p = s[i];
+      const r = round(i);
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+      cross.setAttribute('opacity', '1');
+      const rows = [
+        ['var(--series-baseline)', 'baseline', pct(p.control)],
+        p.treatment != null ? ['var(--series-candidate)', 'candidate', pct(p.treatment)] : null,
+        (p.holdout_treatment ?? p.holdout_control) != null
+          ? ['var(--series-holdout)', 'holdout', pct(p.holdout_treatment ?? p.holdout_control)] : null,
+      ].filter(Boolean);
+      tip.innerHTML = `<h4>Round ${p.round}${r ? ' · ' + r.title : ' · baseline measurement'}</h4>`
+        + rows.map(([c, k, v]) => `<div class="row"><span class="k"><i style="background:${c}"></i>${k}</span><span class="v">${v}</span></div>`).join('')
+        + (r && r.lift_abs != null
+          ? `<div class="row" style="margin-top:7px"><span class="k">lift</span><span class="v">${pp(r.lift_abs)}</span></div>`
+            + `<div class="row"><span class="k">p-value</span><span class="v">${pval(r.p_value)}</span></div>`
+          : '');
+      const box = host.getBoundingClientRect();
+      const px = (x(i) / W) * box.width;
+      tip.style.left = `${Math.min(Math.max(px - 90, 0), box.width - 200)}px`;
+      tip.style.top = `${(y(p.treatment ?? p.control) / H) * box.height - 20}px`;
+      tip.classList.add('on');
+    });
+    hit.addEventListener('mouseleave', () => {
+      tip.classList.remove('on');
+      cross.setAttribute('opacity', '0');
+    });
+  });
+
+  // table view — the same data, for anyone who cannot use the chart
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>round</th><th>change</th><th class="num">baseline</th>'
+    + '<th class="num">candidate</th><th class="num">lift</th><th class="num">p</th>'
+    + '<th class="num">holdout</th><th>decision</th></tr></thead>';
+  const tb = el('tbody');
+  s.forEach((p) => {
+    const r = DATA.rounds.find((x) => x.round === p.round);
+    const tr = el('tr');
+    tr.innerHTML = `<td>${p.round}</td><td>${r ? r.title : 'baseline measurement'}</td>`
+      + `<td class="num">${pct(p.control)}</td><td class="num">${pct(p.treatment)}</td>`
+      + `<td class="num">${r ? pp(r.lift_abs) : '–'}</td><td class="num">${r ? pval(r.p_value) : '–'}</td>`
+      + `<td class="num">${pct(p.holdout_treatment ?? p.holdout_control)}</td>`
+      + `<td>${r ? r.status.replace(/_/g, ' ') : '–'}</td>`;
+    tb.append(tr);
+  });
+  t.append(tb);
+  document.getElementById('dataTable').replaceChildren(t);
+}
+renderChart();
+addEventListener('resize', () => { /* viewBox scales; tooltip repositions on next hover */ });
+
+/* ----------------------------------------------------------------- defects */
+
+const DEFECTS = [
+  ['D1 · the form', 'Signup asks for nine fields before anyone may pay.',
+   'abandon_reason: too_many_fields'],
+  ['D2 · the wall', 'Checkout is gated behind account creation, with no guest path.',
+   'abandon_reason: forced_signup'],
+  ['D3 · the tap target', 'A pinned total bar covers the pay button on phones.',
+   'click_blocked / click_intercepted'],
+];
+document.getElementById('defects').replaceChildren(...DEFECTS.map(([h, p, sig]) => {
+  const c = el('div', 'card');
+  c.append(el('h3', null, h), el('p', null, p));
+  const code = el('p');
+  code.innerHTML = `<code style="color:var(--warn)">${sig}</code>`;
+  code.style.marginTop = '9px';
+  c.append(code);
+  return c;
+}));
+
+const f0 = DATA.funnel0.filter((f) => f.dropped > 0 || f.step === 'confirmation');
+const fr = DATA.friction0.map((f) => `<code>${f.value}</code> ${f.count} sessions${f.step ? ' at ' + f.step : ''}`);
+document.getElementById('funnel0').innerHTML =
+  `<p style="margin-bottom:10px">Conversion <b>${pct(DATA.baseline)}</b> over ${DATA.n_per_arm} sessions`
+  + (DATA.holdout0 != null ? ` (holdout ${pct(DATA.holdout0)})` : '') + `. Where they went:</p>`
+  + `<table><thead><tr><th>step</th><th class="num">reached</th><th class="num">lost here</th><th class="num">drop rate</th></tr></thead><tbody>`
+  + DATA.funnel0.map((f) => `<tr><td><code>${f.step}</code></td><td class="num">${f.reached}</td>`
+      + `<td class="num">${f.dropped}</td><td class="num">${(f.drop_rate * 100).toFixed(0)}%</td></tr>`).join('')
+  + `</tbody></table>`
+  + `<p style="margin-top:14px;color:var(--muted)">Ranked friction handed to the agent: ${fr.join(' · ')}</p>`;
+
+/* ------------------------------------------------------------------ rounds */
+
+function renderRound(r) {
+  const human = r.autonomy === 'pending_approval';
+  const card = el('article', `round ${human ? 'human' : 'adopted'}`);
+
+  const head = el('div', 'r-head');
+  head.append(el('span', 'idx', `round ${r.round}`));
+  const t = el('div');
+  t.append(el('h3', null, r.title));
+  const sub = el('div', 'sub');
+  sub.innerHTML = `<code>${r.hypothesis_id || ''}</code> · chosen by ${r.selection_mode || 'heuristic'} ranking`
+    + ` · ${r.files_changed} file(s), ${r.lines_changed} changed line(s)`;
+  t.append(sub);
+  head.append(t);
+  head.append(el('span', `pill ${human ? 'warn' : 'good'}`,
+    human ? 'human approved' : 'auto-adopted'));
+  card.append(head);
+
+  const stats = el('div', 'stats');
+  [['baseline', pct(r.control), ''], ['candidate', pct(r.treatment), ''],
+   ['absolute lift', pp(r.lift_abs), 'up'], ['relative', `+${(r.lift_rel * 100).toFixed(0)}%`, 'up'],
+   ['p-value', pval(r.p_value), ''],
+   ['95% CI', r.ci95 ? `${pp(r.ci95[0], 0)} … ${pp(r.ci95[1], 0)}` : '–', '']]
+    .forEach(([k, v, cls]) => {
+      const d = el('div', `stat ${cls}`.trim());
+      d.append(el('b', null, v), el('span', null, k));
+      stats.append(d);
+    });
+  card.append(stats);
+
+  const body = el('div', 'r-body');
+
+  if (r.rationale) {
+    const w = el('div');
+    w.append(el('div', 'h4', "Why the agent picked this one"));
+    w.append(el('p', 'quote', r.rationale));
+    body.append(w);
+  }
+
+  // hypotheses
+  const hw = el('div');
+  hw.append(el('div', 'h4', `Hypotheses considered — ${r.hypotheses.length} proposed, 1 implemented`));
+  const ht = el('table');
+  ht.innerHTML = '<thead><tr><th>hypothesis</th><th class="num">sessions lost to it</th>'
+    + '<th>risk</th><th>outcome</th></tr></thead><tbody>'
+    + r.hypotheses.map((h) => `<tr><td>${h.title}<div style="color:var(--dim);font-family:var(--mono);font-size:11.5px">${h.id}</div></td>`
+      + `<td class="num">${h.friction_sessions}</td><td>${h.risk}</td>`
+      + `<td>${h.selected ? '<span class="hyp-sel">implemented</span>'
+        : (h.already_shipped ? 'already shipped' : 'deferred')}</td></tr>`).join('')
+    + '</tbody>';
+  hw.append(ht);
+  body.append(hw);
+
+  // diff
+  if (r.diff.length) {
+    const dw = el('div');
+    dw.append(el('div', 'h4', 'The change it wrote'));
+    const pre = el('pre', 'diff');
+    pre.innerHTML = r.diff.map((l) => `<span class="d-${l.k}">${l.t.replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) || ' '}</span>`).join('');
+    dw.append(pre);
+    body.append(dw);
+  }
+
+  // gate
+  const cases = (r.smoke.cases || []);
+  if (cases.length) {
+    const gw = el('div');
+    gw.append(el('div', 'h4',
+      `Eval gate — ${r.smoke.pass_count}/${r.smoke.case_count} passed, before any traffic`));
+    const g = el('div', 'gate');
+    cases.forEach((c) => {
+      const d = el('div', 'case');
+      d.append(el('i', null, c.passed ? '✓' : '✕'), el('span', null, c.case), el('span', 'kind', c.kind));
+      if (c.detail) d.append(el('span', 'detail', c.detail));
+      g.append(d);
+    });
+    gw.append(g);
+    body.append(gw);
+  }
+
+  // shots
+  if (r.shots.before && r.shots.after) {
+    const sw = el('div');
+    const [where, was, now] = r.shots.caption;
+    sw.append(el('div', 'h4', `Before and after — ${where}: ${was} → ${now}`));
+    const grid = el('div', 'shots');
+    [['before', r.shots.before], ['after', r.shots.after]].forEach(([phase, src]) => {
+      const fig = el('figure', 'shot');
+      const cap = el('figcaption');
+      cap.innerHTML = `<span class="tag ${phase}">${phase}</span><span>${phase === 'before' ? 'control arm' : 'treatment arm'}</span>`;
+      const img = el('img');
+      img.src = src;
+      img.alt = `${phase}: ${where}`;
+      img.loading = 'lazy';
+      fig.append(cap, img);
+      grid.append(fig);
+    });
+    sw.append(grid);
+    body.append(sw);
+  }
+
+  // verdict
+  const v = el('div', `verdict ${human ? 'warn' : 'good'}`);
+  v.textContent = r.decision_reason;
+  const paths = el('div', 'paths');
+  r.files.forEach((p) => {
+    const c = el('code', r.needs_approval.includes(p) ? 'flag' : null, p);
+    paths.append(c);
+  });
+  const vw = el('div');
+  vw.append(el('div', 'h4', 'What the analyzer decided'), v, paths);
+  body.append(vw);
+
+  card.append(body);
+  return card;
+}
+
+document.getElementById('rounds').replaceChildren(...DATA.rounds.map(renderRound));
+document.getElementById('runtime').textContent =
+  `A three-round run is about ${DATA.sessions.toLocaleString()} browser sessions and takes roughly 13 minutes on a laptop.`;
+</script>
+</body>
+</html>

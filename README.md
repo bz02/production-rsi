@@ -12,6 +12,11 @@ with a live A/B test rather than asserting it.
 Every number in this repository comes from a real browser session against a real
 server. Nothing is a mock, and no curve is hardcoded.
 
+**[Read the run report →](https://bz02.github.io/production-rsi/)** — the full
+three-round run as one page: every hypothesis, diff, eval-gate result, before/after
+screenshot and decision, generated from the run's own artifacts. The pitch deck is
+[`docs/Flywheel.pdf`](docs/Flywheel.pdf).
+
 ---
 
 ## What it actually does
@@ -106,6 +111,8 @@ agent/test_tools.py       the agent's sandbox, under test
 orchestrator/run_loop.py  chains one round together and owns all state
 dashboard/                static page + tiny API, polls data/state.json every 2s
 data/                     logs, metrics, analysis, per-round artifacts, state.json
+docs/build_report.py      renders the run's artifacts into docs/index.html (GitHub Pages)
+docs/capture_shots.py     before/after captures, served from each round's own two trees
 .github/workflows/ci.yml  both test suites on every push; no browser, a few seconds
 ```
 
