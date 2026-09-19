@@ -1,0 +1,193 @@
+{
+  "round": 2,
+  "n_per_arm": 200,
+  "control": {
+    "n": 200,
+    "conversions": 70,
+    "conversion_rate": 0.35,
+    "avg_steps": 5.6,
+    "avg_duration_s": 3.0,
+    "http_error_rate": 0.0,
+    "blocked_click_rate": 0.275,
+    "funnel": [
+      {
+        "step": "landing",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "product",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "cart",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "signup",
+        "reached": 200,
+        "dropped": 75,
+        "drop_rate": 0.375
+      },
+      {
+        "step": "shipping",
+        "reached": 125,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "payment",
+        "reached": 125,
+        "dropped": 55,
+        "drop_rate": 0.44
+      },
+      {
+        "step": "confirmation",
+        "reached": 70,
+        "dropped": 0,
+        "drop_rate": 0.0
+      }
+    ],
+    "by_persona": {
+      "careful_desktop": {
+        "n": 46,
+        "conversions": 44,
+        "conversion_rate": 0.9565,
+        "device": "desktop"
+      },
+      "novice_mobile": {
+        "n": 80,
+        "conversions": 0,
+        "conversion_rate": 0.0,
+        "device": "mobile"
+      },
+      "impatient_desktop": {
+        "n": 74,
+        "conversions": 26,
+        "conversion_rate": 0.3514,
+        "device": "desktop"
+      }
+    }
+  },
+  "treatment": {
+    "n": 200,
+    "conversions": 123,
+    "conversion_rate": 0.615,
+    "avg_steps": 6.62,
+    "avg_duration_s": 3.9,
+    "http_error_rate": 0.0,
+    "blocked_click_rate": 0.385,
+    "funnel": [
+      {
+        "step": "landing",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "product",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "cart",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "signup",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "shipping",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "payment",
+        "reached": 200,
+        "dropped": 77,
+        "drop_rate": 0.385
+      },
+      {
+        "step": "confirmation",
+        "reached": 123,
+        "dropped": 0,
+        "drop_rate": 0.0
+      }
+    ],
+    "by_persona": {
+      "careful_desktop": {
+        "n": 54,
+        "conversions": 54,
+        "conversion_rate": 1.0,
+        "device": "desktop"
+      },
+      "novice_mobile": {
+        "n": 77,
+        "conversions": 0,
+        "conversion_rate": 0.0,
+        "device": "mobile"
+      },
+      "impatient_desktop": {
+        "n": 69,
+        "conversions": 69,
+        "conversion_rate": 1.0,
+        "device": "desktop"
+      }
+    }
+  },
+  "comparison": {
+    "lift_abs": 0.265,
+    "lift_rel": 0.7571,
+    "p_value": 0.0,
+    "ci95": [
+      0.1706,
+      0.3594
+    ],
+    "z": 5.303
+  },
+  "guardrails": {
+    "smoke_test": true,
+    "http_error_delta": 0.0,
+    "protected_paths_touched": false,
+    "pass": true
+  },
+  "decision": "pending_approval",
+  "decision_reason": "Conversion +26.5% (p=0.000) and guardrails pass, but human approval is required: touches app/server.py; outside the auto-adopt allowlist: app/server.py.",
+  "autonomy": "pending_approval",
+  "diff": {
+    "verdict": "pending_approval",
+    "files": [
+      "app/server.py",
+      "app/static/app.css",
+      "app/templates/signup.html"
+    ],
+    "files_changed": 3,
+    "lines_changed": 15,
+    "protected_paths_touched": false,
+    "protected_hits": [],
+    "needs_approval_hits": [
+      "app/server.py"
+    ],
+    "outside_allowlist": [
+      "app/server.py"
+    ],
+    "over_file_limit": false,
+    "over_line_limit": false
+  },
+  "holdout": {
+    "control": 0.66,
+    "treatment": 1.0
+  }
+}

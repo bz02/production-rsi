@@ -1,0 +1,112 @@
+{
+  "round_analyzed": 2,
+  "baseline_conversion": 0.35,
+  "baseline_sessions": 200,
+  "funnel": [
+    {
+      "step": "landing",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "product",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "cart",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "signup",
+      "reached": 200,
+      "dropped": 75,
+      "drop_rate": 0.375
+    },
+    {
+      "step": "shipping",
+      "reached": 125,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "payment",
+      "reached": 125,
+      "dropped": 55,
+      "drop_rate": 0.44
+    },
+    {
+      "step": "confirmation",
+      "reached": 70,
+      "dropped": 0,
+      "drop_rate": 0.0
+    }
+  ],
+  "top_friction": [
+    {
+      "type": "abandon_reason",
+      "value": "forced_signup",
+      "count": 75,
+      "step": "signup"
+    },
+    {
+      "type": "abandon_reason",
+      "value": "blocked",
+      "count": 55,
+      "step": "payment"
+    },
+    {
+      "type": "blocked_click",
+      "value": "click_intercepted",
+      "count": 55,
+      "step": "payment",
+      "device": "mobile"
+    },
+    {
+      "type": "validation_error",
+      "value": "field_rejected",
+      "count": 10,
+      "step": "signup"
+    },
+    {
+      "type": "validation_error",
+      "value": "field_rejected",
+      "count": 7,
+      "step": "shipping"
+    },
+    {
+      "type": "validation_error",
+      "value": "field_rejected",
+      "count": 1,
+      "step": "payment"
+    }
+  ],
+  "by_persona": {
+    "careful_desktop": {
+      "n": 46,
+      "conversion_rate": 0.9565,
+      "device": "desktop"
+    },
+    "novice_mobile": {
+      "n": 80,
+      "conversion_rate": 0.0,
+      "device": "mobile"
+    },
+    "impatient_desktop": {
+      "n": 74,
+      "conversion_rate": 0.3514,
+      "device": "desktop"
+    }
+  },
+  "sample_traces": [
+    "[novice_mobile] signup:validation_error -> signup:click -> shipping:click -> payment:click_blocked(primary-action) -> payment:click_blocked(primary-action) -> payment:click_blocked(primary-action) -> payment:abandon(blocked) -> payment:session_end | last_step=payment steps=6",
+    "[impatient_desktop] landing:click -> product:click -> cart:click -> signup:abandon(forced_signup) -> signup:session_end | last_step=signup steps=4",
+    "[impatient_desktop] landing:click -> product:click -> cart:click -> signup:abandon(forced_signup) -> signup:session_end | last_step=signup steps=4",
+    "[impatient_desktop] landing:click -> product:click -> cart:click -> signup:abandon(forced_signup) -> signup:session_end | last_step=signup steps=4",
+    "[novice_mobile] cart:click -> signup:click -> shipping:click -> payment:click_blocked(primary-action) -> payment:click_blocked(primary-action) -> payment:click_blocked(primary-action) -> payment:abandon(blocked) -> payment:session_end | last_step=payment steps=6"
+  ]
+}

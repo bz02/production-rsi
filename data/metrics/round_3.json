@@ -1,0 +1,187 @@
+{
+  "round": 3,
+  "n_per_arm": 200,
+  "control": {
+    "n": 200,
+    "conversions": 123,
+    "conversion_rate": 0.615,
+    "avg_steps": 6.62,
+    "avg_duration_s": 3.9,
+    "http_error_rate": 0.0,
+    "blocked_click_rate": 0.385,
+    "funnel": [
+      {
+        "step": "landing",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "product",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "cart",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "signup",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "shipping",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "payment",
+        "reached": 200,
+        "dropped": 77,
+        "drop_rate": 0.385
+      },
+      {
+        "step": "confirmation",
+        "reached": 123,
+        "dropped": 0,
+        "drop_rate": 0.0
+      }
+    ],
+    "by_persona": {
+      "careful_desktop": {
+        "n": 56,
+        "conversions": 56,
+        "conversion_rate": 1.0,
+        "device": "desktop"
+      },
+      "novice_mobile": {
+        "n": 77,
+        "conversions": 0,
+        "conversion_rate": 0.0,
+        "device": "mobile"
+      },
+      "impatient_desktop": {
+        "n": 67,
+        "conversions": 67,
+        "conversion_rate": 1.0,
+        "device": "desktop"
+      }
+    }
+  },
+  "treatment": {
+    "n": 200,
+    "conversions": 200,
+    "conversion_rate": 1.0,
+    "avg_steps": 7.0,
+    "avg_duration_s": 1.1,
+    "http_error_rate": 0.0,
+    "blocked_click_rate": 0.0,
+    "funnel": [
+      {
+        "step": "landing",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "product",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "cart",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "signup",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "shipping",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "payment",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      },
+      {
+        "step": "confirmation",
+        "reached": 200,
+        "dropped": 0,
+        "drop_rate": 0.0
+      }
+    ],
+    "by_persona": {
+      "careful_desktop": {
+        "n": 50,
+        "conversions": 50,
+        "conversion_rate": 1.0,
+        "device": "desktop"
+      },
+      "novice_mobile": {
+        "n": 75,
+        "conversions": 75,
+        "conversion_rate": 1.0,
+        "device": "mobile"
+      },
+      "impatient_desktop": {
+        "n": 75,
+        "conversions": 75,
+        "conversion_rate": 1.0,
+        "device": "desktop"
+      }
+    }
+  },
+  "comparison": {
+    "lift_abs": 0.385,
+    "lift_rel": 0.626,
+    "p_value": 0.0,
+    "ci95": [
+      0.3176,
+      0.4524
+    ],
+    "z": 9.765
+  },
+  "guardrails": {
+    "smoke_test": true,
+    "http_error_delta": 0.0,
+    "protected_paths_touched": false,
+    "pass": true
+  },
+  "decision": "adopt",
+  "decision_reason": "Conversion +38.5% (p=0.000), guardrails pass, diff touches 1 file(s), 6 line(s) \u2014 inside the auto-adopt policy.",
+  "autonomy": "auto",
+  "diff": {
+    "verdict": "auto",
+    "files": [
+      "app/static/app.css"
+    ],
+    "files_changed": 1,
+    "lines_changed": 6,
+    "protected_paths_touched": false,
+    "protected_hits": [],
+    "needs_approval_hits": [],
+    "outside_allowlist": [],
+    "over_file_limit": false,
+    "over_line_limit": false
+  },
+  "holdout": {
+    "control": 1.0,
+    "treatment": 1.0
+  }
+}

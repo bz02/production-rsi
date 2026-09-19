@@ -32,8 +32,21 @@ several hypotheses, implements exactly one, and has to clear an eval gate before
 single simulated customer sees it. Then both versions run side by side and the
 statistics decide.
 
-**Measured baseline: 26.3% conversion** over 80 sessions (holdout 20.0%), with 65%
-of shoppers lost at `signup` and 25% of the survivors lost at `payment`.
+**Measured baseline: 28.5% conversion** over 200 sessions (holdout 22.0%), with 64%
+of shoppers lost at `signup` and 21% of the survivors lost at `payment`.
+
+Three rounds later, on a run anyone can reproduce with the command below:
+
+| round | change | control → candidate | lift | p | decision |
+|---|---|---|---|---|---|
+| 1 | cut the signup form to four fields | 30.0% → 41.0% | +11.0pp | 0.021 | **auto-adopted** |
+| 2 | add a guest checkout path | 35.0% → 61.5% | +26.5pp | <0.001 | **human approval** — touches `app/server.py` |
+| 3 | stop the pay bar covering the pay button | 61.5% → 100.0% | +38.5pp | <0.001 | **auto-adopted** |
+
+Both autonomy paths fire in one run: two CSS/template changes ship unattended, and
+the one that edits a route stops for a person. The endpoint is 100% because this
+population has exactly three reasons to leave and the loop removed all three — the
+numbers to read are the per-round lifts and their p-values, not the ceiling.
 
 ---
 
@@ -43,16 +56,18 @@ of shoppers lost at `signup` and 25% of the survivors lost at `payment`.
 pip install flask playwright && playwright install chromium
 
 # round 0 measures the untouched baseline; rounds 1..3 each improve it
-python orchestrator/run_loop.py --rounds 3 --n 80 --seed 7
+python orchestrator/run_loop.py --rounds 3 --n 200 --seed 7
 
 # watch it happen
 python dashboard/server.py        # http://127.0.0.1:8080
 ```
 
+![The dashboard after a three-round run](docs/dashboard.png)
+
 Or let it decide how many rounds it needs:
 
 ```bash
-python orchestrator/run_loop.py --target 0.55 --max-rounds 6 --n 80 --seed 7
+python orchestrator/run_loop.py --target 0.55 --max-rounds 6 --n 200 --seed 7
 ```
 
 Rounds then stop being a budget to spend and become attempts at a number: the loop
@@ -82,8 +97,10 @@ personas/personas.json    four rule-based personas, train mix + holdout
 sim/simulator.py          Playwright sessions; the sole writer of logs
 sim/smoke.py              the eval gate that stands between "code written" and "traffic"
 analyzer/analyze.py       funnel, per-persona split, z-test, guardrails, the decision
+analyzer/test_stats.py    the decision arithmetic and policy classification, under test
 agent/agent.py            the improvement loop: summary in, one code change out
 agent/policy.json         auto-adopt allowlist / approval paths / protected paths
+agent/test_tools.py       the agent's sandbox, under test
 orchestrator/run_loop.py  chains one round together and owns all state
 dashboard/                static page + tiny API, polls data/state.json every 2s
 data/                     logs, metrics, analysis, per-round artifacts, state.json
@@ -161,9 +178,18 @@ that actually appear in each arm's logs — never a fixed list, because the agen
 allowed to delete a funnel step and a hardcoded funnel would silently mis-attribute
 that round.
 
-At `n=80` per arm the design detects roughly a 15pp move at `p≈0.05`. An
-underpowered win is rolled back, not shipped: at `n=16` a genuine +18.8pp came back
-`p=0.238` and the analyzer correctly refused it.
+Sample size is the thing this loop got wrong first, so it is worth being precise
+about. At `n=80` per arm the design detects roughly a 15pp move at `p≈0.05` — and the
+first real win it found, the signup trim, is +11pp. Three rounds in a row proposed it
+and three rounds in a row lost it to noise (`p=0.177`), while the control arm alone
+wandered 23.8% → 27.5% → 33.8% on an app nobody had touched. A loop that cannot
+resolve its own wins does not converge; it just churns.
+
+So sessions run in parallel (`--workers`, default 6, results identical at any worker
+count) and the default sample is `n=200` per arm, where an 11pp move lands at
+`p=0.02`. The gate did its job in both regimes — that is the point: at `n=16` a
+genuine +18.8pp came back `p=0.238` and was refused. Underpowered wins are rolled
+back, not shipped, so the fix is to buy power, not to lower the threshold.
 
 **Holdout personas** (`senior_tablet`) never appear in the agent's summary and never
 influence a decision. They are reported separately on the dashboard as an
@@ -257,9 +283,13 @@ afterwards to confirm it was not touched.
 ## Reproducing the headline
 
 ```bash
-python orchestrator/run_loop.py --rounds 3 --n 80 --seed 7 --auto-approve --reset
+python orchestrator/run_loop.py --rounds 3 --n 200 --seed 7 --auto-approve --reset
 python dashboard/server.py
 ```
+
+That run takes about 13 minutes on a laptop (6 parallel workers, 1000 real browser
+sessions). `--auto-approve` stands in for the human click that round 2 would
+otherwise wait for; drop it to click Approve in the dashboard yourself.
 
 Round 0 establishes the baseline. Each later round should pick the largest remaining
 loss in the funnel — which, given the three planted defects, means the form, then the

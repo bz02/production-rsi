@@ -1,5 +1,5 @@
 {
-  "current_round": 0,
+  "current_round": 3,
   "phase": "idle",
   "phase_options": [
     "analyzing",
@@ -11,7 +11,28 @@
   "conversion_series": [
     {
       "round": 0,
-      "control": 0.375
+      "control": 0.285
+    },
+    {
+      "round": 1,
+      "control": 0.3,
+      "treatment": 0.41,
+      "adopted": true,
+      "pending": false
+    },
+    {
+      "round": 2,
+      "control": 0.35,
+      "treatment": 0.615,
+      "adopted": true,
+      "pending": false
+    },
+    {
+      "round": 3,
+      "control": 0.615,
+      "treatment": 1.0,
+      "adopted": true,
+      "pending": false
     }
   ],
   "rounds": [
@@ -27,7 +48,7 @@
       "diff_path": null,
       "metrics_path": "metrics/round_0.json",
       "conversion": {
-        "control": 0.375,
+        "control": 0.285,
         "treatment": null
       },
       "hypotheses": [],
@@ -40,76 +61,639 @@
       "top_friction": [
         {
           "type": "abandon_reason",
-          "value": "blocked",
-          "count": 2,
-          "step": "payment"
-        },
-        {
-          "type": "abandon_reason",
-          "value": "forced_signup",
-          "count": 2,
-          "step": "signup"
-        },
-        {
-          "type": "blocked_click",
-          "value": "click_intercepted",
-          "count": 2,
-          "step": "payment",
-          "device": "mobile"
-        },
-        {
-          "type": "abandon_reason",
           "value": "too_many_fields",
-          "count": 1,
+          "count": 113,
           "step": "signup",
           "field_count": 8
         },
         {
+          "type": "abandon_reason",
+          "value": "forced_signup",
+          "count": 15,
+          "step": "signup"
+        },
+        {
+          "type": "abandon_reason",
+          "value": "blocked",
+          "count": 15,
+          "step": "payment"
+        },
+        {
+          "type": "blocked_click",
+          "value": "click_intercepted",
+          "count": 15,
+          "step": "payment",
+          "device": "mobile"
+        },
+        {
           "type": "validation_error",
           "value": "field_rejected",
-          "count": 1,
+          "count": 2,
+          "step": "shipping"
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "title": "Cut the signup form to four fields",
+      "hypothesis_id": "h_trim_signup",
+      "selection_mode": "heuristic",
+      "status": "adopted",
+      "autonomy": "auto",
+      "lift_abs": 0.11,
+      "lift_rel": 0.3667,
+      "p_value": 0.0215,
+      "ci95": [
+        0.0168,
+        0.2032
+      ],
+      "before_img": "runs/round_1/before_mobile.png",
+      "after_img": "runs/round_1/after_mobile.png",
+      "shots": [
+        "after_desktop.png",
+        "after_desktop_payment.png",
+        "after_desktop_signup.png",
+        "after_mobile.png",
+        "after_mobile_payment.png",
+        "after_mobile_signup.png",
+        "before_desktop.png",
+        "before_desktop_payment.png",
+        "before_desktop_signup.png",
+        "before_mobile.png",
+        "before_mobile_payment.png",
+        "before_mobile_signup.png"
+      ],
+      "diff_path": "runs/round_1/diff.patch",
+      "metrics_path": "metrics/round_1.json",
+      "change_md": "runs/round_1/change.md",
+      "conversion": {
+        "control": 0.3,
+        "treatment": 0.41
+      },
+      "hypotheses": [
+        {
+          "id": "h_trim_signup",
+          "title": "Cut the signup form to four fields",
+          "evidence": "The form asks for nine fields before anyone may pay. Personas abandon when a single form exceeds what they will tolerate, and the extra five fields are not needed to take an order. Observed: 113 sessions at step 'signup' (8 fields shown)",
+          "expected_impact": "high",
+          "risk": "low",
+          "files": [
+            "app/templates/signup.html"
+          ],
+          "friction_sessions": 113,
+          "already_shipped": false,
+          "selected": true
+        },
+        {
+          "id": "h_guest_checkout",
+          "title": "Add a guest checkout path",
+          "evidence": "Checkout is gated behind account creation with no way around it. Shoppers who do not want an account currently have nowhere to go but away. Observed: 15 sessions at step 'signup'",
+          "expected_impact": "high",
+          "risk": "medium",
+          "files": [
+            "app/templates/signup.html",
+            "app/server.py"
+          ],
+          "friction_sessions": 15,
+          "already_shipped": false,
+          "selected": false
+        },
+        {
+          "id": "h_fix_mobile_tap",
+          "title": "Stop the offer bar covering the pay button on phones",
+          "evidence": "Clicks on the forward action are being intercepted on small viewports. The pinned pay bar overlaps the end of the page because no space is reserved for its height, so the button cannot be tapped at all. Observed: 15 sessions at step 'payment' on mobile",
+          "expected_impact": "high",
+          "risk": "low",
+          "files": [
+            "app/static/app.css"
+          ],
+          "friction_sessions": 15,
+          "already_shipped": false,
+          "selected": false
+        }
+      ],
+      "smoke": {
+        "passed": true,
+        "pass_count": 5,
+        "case_count": 5,
+        "cases": [
+          {
+            "case": "landing page responds",
+            "kind": "contract",
+            "passed": true,
+            "detail": "GET / -> 200"
+          },
+          {
+            "case": "no 5xx responses during the journey",
+            "kind": "contract",
+            "passed": true,
+            "detail": "clean"
+          },
+          {
+            "case": "DOM contract holds on every step",
+            "kind": "contract",
+            "passed": true,
+            "detail": "checked 7 distinct step(s)"
+          },
+          {
+            "case": "perfect desktop user reaches confirmation",
+            "kind": "journey",
+            "passed": true,
+            "detail": "landing -> product -> cart -> signup -> shipping -> payment -> confirmation"
+          },
+          {
+            "case": "funnel completes in a reasonable number of steps",
+            "kind": "journey",
+            "passed": true,
+            "detail": "7 steps"
+          }
+        ]
+      },
+      "guardrails": {
+        "smoke_test": true,
+        "http_error_delta": 0.0,
+        "protected_paths_touched": false,
+        "pass": true
+      },
+      "decision_reason": "Conversion +11.0% (p=0.021), guardrails pass, diff touches 1 file(s), 4 line(s) \u2014 inside the auto-adopt policy.",
+      "diff_stats": {
+        "files": 1,
+        "lines": 4,
+        "paths": [
+          "app/templates/signup.html"
+        ],
+        "protected_touched": false,
+        "needs_approval": []
+      },
+      "holdout": {
+        "control": 0.14,
+        "treatment": 0.52
+      },
+      "top_friction": [
+        {
+          "type": "abandon_reason",
+          "value": "forced_signup",
+          "count": 69,
           "step": "signup"
+        },
+        {
+          "type": "abandon_reason",
+          "value": "blocked",
+          "count": 49,
+          "step": "payment"
+        },
+        {
+          "type": "blocked_click",
+          "value": "click_intercepted",
+          "count": 49,
+          "step": "payment",
+          "device": "mobile"
+        },
+        {
+          "type": "validation_error",
+          "value": "field_rejected",
+          "count": 12,
+          "step": "shipping"
+        },
+        {
+          "type": "validation_error",
+          "value": "field_rejected",
+          "count": 11,
+          "step": "signup"
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "title": "Add a guest checkout path",
+      "hypothesis_id": "h_guest_checkout",
+      "selection_mode": "heuristic",
+      "status": "adopted",
+      "autonomy": "pending_approval",
+      "lift_abs": 0.265,
+      "lift_rel": 0.7571,
+      "p_value": 0.0,
+      "ci95": [
+        0.1706,
+        0.3594
+      ],
+      "before_img": "runs/round_2/before_mobile.png",
+      "after_img": "runs/round_2/after_mobile.png",
+      "shots": [
+        "after_desktop.png",
+        "after_desktop_payment.png",
+        "after_desktop_signup.png",
+        "after_mobile.png",
+        "after_mobile_payment.png",
+        "after_mobile_signup.png",
+        "before_desktop.png",
+        "before_desktop_payment.png",
+        "before_desktop_signup.png",
+        "before_mobile.png",
+        "before_mobile_payment.png",
+        "before_mobile_signup.png"
+      ],
+      "diff_path": "runs/round_2/diff.patch",
+      "metrics_path": "metrics/round_2.json",
+      "change_md": "runs/round_2/change.md",
+      "conversion": {
+        "control": 0.35,
+        "treatment": 0.615
+      },
+      "hypotheses": [
+        {
+          "id": "h_guest_checkout",
+          "title": "Add a guest checkout path",
+          "evidence": "Checkout is gated behind account creation with no way around it. Shoppers who do not want an account currently have nowhere to go but away. Observed: 69 sessions at step 'signup'",
+          "expected_impact": "high",
+          "risk": "medium",
+          "files": [
+            "app/templates/signup.html",
+            "app/server.py"
+          ],
+          "friction_sessions": 69,
+          "already_shipped": false,
+          "selected": true
+        },
+        {
+          "id": "h_fix_mobile_tap",
+          "title": "Stop the offer bar covering the pay button on phones",
+          "evidence": "Clicks on the forward action are being intercepted on small viewports. The pinned pay bar overlaps the end of the page because no space is reserved for its height, so the button cannot be tapped at all. Observed: 49 sessions at step 'payment' on mobile",
+          "expected_impact": "high",
+          "risk": "low",
+          "files": [
+            "app/static/app.css"
+          ],
+          "friction_sessions": 49,
+          "already_shipped": false,
+          "selected": false
+        },
+        {
+          "id": "h_trim_signup",
+          "title": "Cut the signup form to four fields",
+          "evidence": "The form asks for nine fields before anyone may pay. Personas abandon when a single form exceeds what they will tolerate, and the extra five fields are not needed to take an order. Not observed in this round's logs.",
+          "expected_impact": "high",
+          "risk": "low",
+          "files": [
+            "app/templates/signup.html"
+          ],
+          "friction_sessions": 0,
+          "already_shipped": true,
+          "selected": false
+        }
+      ],
+      "smoke": {
+        "passed": true,
+        "pass_count": 5,
+        "case_count": 5,
+        "cases": [
+          {
+            "case": "landing page responds",
+            "kind": "contract",
+            "passed": true,
+            "detail": "GET / -> 200"
+          },
+          {
+            "case": "no 5xx responses during the journey",
+            "kind": "contract",
+            "passed": true,
+            "detail": "clean"
+          },
+          {
+            "case": "DOM contract holds on every step",
+            "kind": "contract",
+            "passed": true,
+            "detail": "checked 7 distinct step(s)"
+          },
+          {
+            "case": "perfect desktop user reaches confirmation",
+            "kind": "journey",
+            "passed": true,
+            "detail": "landing -> product -> cart -> signup -> shipping -> payment -> confirmation"
+          },
+          {
+            "case": "funnel completes in a reasonable number of steps",
+            "kind": "journey",
+            "passed": true,
+            "detail": "7 steps"
+          }
+        ]
+      },
+      "guardrails": {
+        "smoke_test": true,
+        "http_error_delta": 0.0,
+        "protected_paths_touched": false,
+        "pass": true
+      },
+      "decision_reason": "Conversion +26.5% (p=0.000) and guardrails pass, but human approval is required: touches app/server.py; outside the auto-adopt allowlist: app/server.py.",
+      "diff_stats": {
+        "files": 3,
+        "lines": 15,
+        "paths": [
+          "app/server.py",
+          "app/static/app.css",
+          "app/templates/signup.html"
+        ],
+        "protected_touched": false,
+        "needs_approval": [
+          "app/server.py"
+        ]
+      },
+      "holdout": {
+        "control": 0.66,
+        "treatment": 1.0
+      },
+      "top_friction": [
+        {
+          "type": "abandon_reason",
+          "value": "forced_signup",
+          "count": 75,
+          "step": "signup"
+        },
+        {
+          "type": "abandon_reason",
+          "value": "blocked",
+          "count": 55,
+          "step": "payment"
+        },
+        {
+          "type": "blocked_click",
+          "value": "click_intercepted",
+          "count": 55,
+          "step": "payment",
+          "device": "mobile"
+        },
+        {
+          "type": "validation_error",
+          "value": "field_rejected",
+          "count": 10,
+          "step": "signup"
+        },
+        {
+          "type": "validation_error",
+          "value": "field_rejected",
+          "count": 7,
+          "step": "shipping"
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "title": "Stop the offer bar covering the pay button on phones",
+      "hypothesis_id": "h_fix_mobile_tap",
+      "selection_mode": "heuristic",
+      "status": "adopted",
+      "autonomy": "auto",
+      "lift_abs": 0.385,
+      "lift_rel": 0.626,
+      "p_value": 0.0,
+      "ci95": [
+        0.3176,
+        0.4524
+      ],
+      "before_img": "runs/round_3/before_mobile.png",
+      "after_img": "runs/round_3/after_mobile.png",
+      "shots": [
+        "after_desktop.png",
+        "after_desktop_payment.png",
+        "after_desktop_signup.png",
+        "after_mobile.png",
+        "after_mobile_payment.png",
+        "after_mobile_signup.png",
+        "before_desktop.png",
+        "before_desktop_payment.png",
+        "before_desktop_signup.png",
+        "before_mobile.png",
+        "before_mobile_payment.png",
+        "before_mobile_signup.png"
+      ],
+      "diff_path": "runs/round_3/diff.patch",
+      "metrics_path": "metrics/round_3.json",
+      "change_md": "runs/round_3/change.md",
+      "conversion": {
+        "control": 0.615,
+        "treatment": 1.0
+      },
+      "hypotheses": [
+        {
+          "id": "h_fix_mobile_tap",
+          "title": "Stop the offer bar covering the pay button on phones",
+          "evidence": "Clicks on the forward action are being intercepted on small viewports. The pinned pay bar overlaps the end of the page because no space is reserved for its height, so the button cannot be tapped at all. Observed: 55 sessions at step 'payment' on mobile",
+          "expected_impact": "high",
+          "risk": "low",
+          "files": [
+            "app/static/app.css"
+          ],
+          "friction_sessions": 55,
+          "already_shipped": false,
+          "selected": true
+        },
+        {
+          "id": "h_guest_checkout",
+          "title": "Add a guest checkout path",
+          "evidence": "Checkout is gated behind account creation with no way around it. Shoppers who do not want an account currently have nowhere to go but away. Observed: 75 sessions at step 'signup'",
+          "expected_impact": "high",
+          "risk": "medium",
+          "files": [
+            "app/templates/signup.html",
+            "app/server.py"
+          ],
+          "friction_sessions": 75,
+          "already_shipped": true,
+          "selected": false
+        },
+        {
+          "id": "h_trim_signup",
+          "title": "Cut the signup form to four fields",
+          "evidence": "The form asks for nine fields before anyone may pay. Personas abandon when a single form exceeds what they will tolerate, and the extra five fields are not needed to take an order. Not observed in this round's logs.",
+          "expected_impact": "high",
+          "risk": "low",
+          "files": [
+            "app/templates/signup.html"
+          ],
+          "friction_sessions": 0,
+          "already_shipped": true,
+          "selected": false
+        }
+      ],
+      "smoke": {
+        "passed": true,
+        "pass_count": 5,
+        "case_count": 5,
+        "cases": [
+          {
+            "case": "landing page responds",
+            "kind": "contract",
+            "passed": true,
+            "detail": "GET / -> 200"
+          },
+          {
+            "case": "no 5xx responses during the journey",
+            "kind": "contract",
+            "passed": true,
+            "detail": "clean"
+          },
+          {
+            "case": "DOM contract holds on every step",
+            "kind": "contract",
+            "passed": true,
+            "detail": "checked 7 distinct step(s)"
+          },
+          {
+            "case": "perfect desktop user reaches confirmation",
+            "kind": "journey",
+            "passed": true,
+            "detail": "landing -> product -> cart -> signup -> shipping -> payment -> confirmation"
+          },
+          {
+            "case": "funnel completes in a reasonable number of steps",
+            "kind": "journey",
+            "passed": true,
+            "detail": "7 steps"
+          }
+        ]
+      },
+      "guardrails": {
+        "smoke_test": true,
+        "http_error_delta": 0.0,
+        "protected_paths_touched": false,
+        "pass": true
+      },
+      "decision_reason": "Conversion +38.5% (p=0.000), guardrails pass, diff touches 1 file(s), 6 line(s) \u2014 inside the auto-adopt policy.",
+      "diff_stats": {
+        "files": 1,
+        "lines": 6,
+        "paths": [
+          "app/static/app.css"
+        ],
+        "protected_touched": false,
+        "needs_approval": []
+      },
+      "holdout": {
+        "control": 1.0,
+        "treatment": 1.0
+      },
+      "top_friction": [
+        {
+          "type": "validation_error",
+          "value": "field_rejected",
+          "count": 19,
+          "step": "payment"
+        },
+        {
+          "type": "validation_error",
+          "value": "field_rejected",
+          "count": 15,
+          "step": "shipping"
         }
       ]
     }
   ],
   "timeline": [
     {
-      "ts": 1789850799.389531,
-      "msg": "Round 0: measuring the untouched baseline over 80 sessions"
+      "ts": 1789854489.540952,
+      "msg": "Round 0: measuring the untouched baseline over 200 sessions"
     },
     {
-      "ts": 1789850987.0218096,
-      "msg": "Round 0 baseline conversion 23.8%; top friction: too_many_fields, blocked, click_intercepted"
+      "ts": 1789854553.752244,
+      "msg": "Round 0 baseline conversion 28.5%; top friction: too_many_fields, forced_signup, blocked"
     },
     {
-      "ts": 1789850987.0222356,
+      "ts": 1789854553.752457,
       "msg": "Round 1: agent reading round 0 summary"
     },
     {
-      "ts": 1789850987.0876722,
+      "ts": 1789854553.7907991,
       "msg": "Agent proposed 3 hypotheses (heuristic ranking), selected: Cut the signup form to four fields"
     },
     {
-      "ts": 1789850987.0898347,
+      "ts": 1789854553.795897,
       "msg": "Diff written: 1 file(s) changed"
     },
     {
-      "ts": 1789850989.5778043,
+      "ts": 1789854555.516444,
       "msg": "Eval gate: 5/5 cases passed -> PASS"
     },
     {
-      "ts": 1789850994.1090906,
-      "msg": "Running A/B: 80 sessions per arm"
+      "ts": 1789854559.232658,
+      "msg": "Running A/B: 200 sessions per arm"
     },
     {
-      "ts": 1789852552.97768,
-      "msg": "Round 0: measuring the untouched baseline over 8 sessions"
+      "ts": 1789854732.475307,
+      "msg": "control 30.0% vs treatment 41.0%"
     },
     {
-      "ts": 1789852592.989307,
-      "msg": "Round 0 baseline conversion 37.5%; top friction: blocked, forced_signup, click_intercepted"
+      "ts": 1789854753.997438,
+      "msg": "Decision: ADOPT \u2014 Conversion +11.0% (p=0.021), guardrails pass, diff touches 1 file(s), 4 line(s) \u2014 inside the auto-adopt policy."
+    },
+    {
+      "ts": 1789854754.003679,
+      "msg": "Candidate promoted to baseline automatically (inside auto-adopt policy)"
+    },
+    {
+      "ts": 1789854754.0161111,
+      "msg": "Round 2: agent reading round 1 summary"
+    },
+    {
+      "ts": 1789854754.057674,
+      "msg": "Agent proposed 3 hypotheses (heuristic ranking), selected: Add a guest checkout path"
+    },
+    {
+      "ts": 1789854754.064333,
+      "msg": "Diff written: 3 file(s) changed"
+    },
+    {
+      "ts": 1789854755.731958,
+      "msg": "Eval gate: 5/5 cases passed -> PASS"
+    },
+    {
+      "ts": 1789854759.4570298,
+      "msg": "Running A/B: 200 sessions per arm"
+    },
+    {
+      "ts": 1789855037.879732,
+      "msg": "control 35.0% vs treatment 61.5%"
+    },
+    {
+      "ts": 1789855065.08938,
+      "msg": "Decision: PENDING_APPROVAL \u2014 Conversion +26.5% (p=0.000) and guardrails pass, but human approval is required: touches app/server.py; outside the auto-adopt allowlist: app/server.py."
+    },
+    {
+      "ts": 1789855065.097654,
+      "msg": "Approval auto-granted by --auto-approve (stands in for a human click)"
+    },
+    {
+      "ts": 1789855065.106994,
+      "msg": "Round 3: agent reading round 2 summary"
+    },
+    {
+      "ts": 1789855065.15342,
+      "msg": "Agent proposed 3 hypotheses (heuristic ranking), selected: Stop the offer bar covering the pay button on phones"
+    },
+    {
+      "ts": 1789855065.160665,
+      "msg": "Diff written: 1 file(s) changed"
+    },
+    {
+      "ts": 1789855066.835992,
+      "msg": "Eval gate: 5/5 cases passed -> PASS"
+    },
+    {
+      "ts": 1789855070.540234,
+      "msg": "Running A/B: 200 sessions per arm"
+    },
+    {
+      "ts": 1789855267.869965,
+      "msg": "control 61.5% vs treatment 100.0%"
+    },
+    {
+      "ts": 1789855295.207996,
+      "msg": "Decision: ADOPT \u2014 Conversion +38.5% (p=0.000), guardrails pass, diff touches 1 file(s), 6 line(s) \u2014 inside the auto-adopt policy."
+    },
+    {
+      "ts": 1789855295.215691,
+      "msg": "Candidate promoted to baseline automatically (inside auto-adopt policy)"
     }
   ],
-  "updated_at": 1789852592.989438
+  "updated_at": 1789855295.225139
 }

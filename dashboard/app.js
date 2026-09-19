@@ -102,6 +102,9 @@ function renderChart(state) {
   series.forEach((p, i) => {
     const cx = x(i);
     const cy = y(p.control ?? 0);
+    // Round 0 sits on the axis, so a centred label lands on top of the gridline
+    // percentages; nudge the first and last points' labels inwards.
+    const lx = i === 0 ? cx + 16 : i === series.length - 1 ? cx - 8 : cx;
     parts.push(`<circle class="pt pt-control" cx="${cx}" cy="${cy}" r="5"/>`);
     if (p.treatment != null) {
       const ty = y(p.treatment);
@@ -112,9 +115,9 @@ function renderChart(state) {
       // labels cannot collide when the arms land close together.
       const tagY = up ? ty - 13 : ty + 20;
       parts.push(`<text class="lift-tag ${up ? 'lift-up' : 'lift-down'}" x="${cx}" y="${tagY}" text-anchor="middle">${up ? '+' : ''}${(rel * 100).toFixed(0)}%</text>`);
-      parts.push(`<text class="axis-label" x="${cx}" y="${up ? cy + 19 : cy - 12}" text-anchor="middle">${pct(p.control, 0)}</text>`);
+      parts.push(`<text class="axis-label" x="${lx}" y="${up ? cy + 19 : cy - 12}" text-anchor="middle">${pct(p.control, 0)}</text>`);
     } else {
-      parts.push(`<text class="axis-label" x="${cx}" y="${cy + 19}" text-anchor="middle">${pct(p.control, 0)}</text>`);
+      parts.push(`<text class="axis-label" x="${lx}" y="${cy + 19}" text-anchor="middle">${pct(p.control, 0)}</text>`);
     }
     const hold = (state.rounds || []).find((r) => r.round === p.round)?.holdout;
     const hv = hold ? (hold.treatment ?? hold.control) : null;

@@ -1,0 +1,81 @@
+{
+  "round_analyzed": 3,
+  "baseline_conversion": 1.0,
+  "baseline_sessions": 200,
+  "funnel": [
+    {
+      "step": "landing",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "product",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "cart",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "signup",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "shipping",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "payment",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    },
+    {
+      "step": "confirmation",
+      "reached": 200,
+      "dropped": 0,
+      "drop_rate": 0.0
+    }
+  ],
+  "top_friction": [
+    {
+      "type": "validation_error",
+      "value": "field_rejected",
+      "count": 19,
+      "step": "payment"
+    },
+    {
+      "type": "validation_error",
+      "value": "field_rejected",
+      "count": 15,
+      "step": "shipping"
+    }
+  ],
+  "by_persona": {
+    "careful_desktop": {
+      "n": 50,
+      "conversion_rate": 1.0,
+      "device": "desktop"
+    },
+    "novice_mobile": {
+      "n": 75,
+      "conversion_rate": 1.0,
+      "device": "mobile"
+    },
+    "impatient_desktop": {
+      "n": 75,
+      "conversion_rate": 1.0,
+      "device": "desktop"
+    }
+  },
+  "sample_traces": []
+}
