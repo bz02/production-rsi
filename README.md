@@ -62,7 +62,10 @@ its target needs a human to hear about it rather than to keep burning.
 
 Useful flags: `--round N` (one round only), `--rounds N` (a fixed count), `--n`
 (sessions per arm), `--auto-approve` (stand in for a human clicking Approve on an
-unattended run), `--reset` (clear `data/` and restore `app/` from git).
+unattended run), `--reset` (clear `data/` and restore `app/` from git),
+`--baseline-port` / `--candidate-port` (the arms default to :8000 and :8001 and fall
+back to a free port when those are taken, so a machine that already has something on
+:8000 does not fail a twenty-minute run).
 
 The seed is fixed, so a run reproduces exactly — same personas, same order, same
 assignment. That is a property worth stating out loud rather than hiding: it is what
@@ -102,8 +105,10 @@ rather than merely discouraged.
 **3. The agent cannot touch its own evaluator.** `write_file` refuses any path
 outside `candidate/`, and the analyzer independently re-checks the round's diff
 against `protected_paths` and marks the round `invalid` if it finds a hit. Two
-enforcement points, two processes. Verified against `../analyzer/analyze.py`,
-`../personas/personas.json`, `../../etc/passwd` and `/tmp`.
+enforcement points, two processes, one test suite each: `agent/test_tools.py` for the
+refusal (`../analyzer/analyze.py`, `../personas/personas.json`, `../../etc/passwd`,
+`/tmp`, a traversal out of a subdirectory and a symlink leaving the sandbox) and
+`analyzer/test_stats.py` for the re-check.
 
 **4. The decision is not the model's to make.** The analyzer computes it, in code:
 
@@ -230,14 +235,22 @@ ambiguous.
 ## Tests
 
 ```bash
-python analyzer/test_stats.py
+python analyzer/test_stats.py   # decision arithmetic and policy classification
+python agent/test_tools.py      # the agent's sandbox
 ```
 
-20 checks over the arithmetic that decides things: the z-test (including the
+Neither needs a browser or a server, so both run in CI on every push
+(`.github/workflows/ci.yml`) in a few seconds.
+
+`test_stats.py` is 20 checks over the arithmetic that decides things: the z-test (including the
 interface document's own claim that 30% vs 45% at n=80 lands at p≈0.05), the
 degenerate cases, and policy classification from real diff text — including that a
 diff editing `analyzer/analyze.py` comes back `invalid`. That last one is what makes
-"the agent cannot edit its own scorer" a test rather than a claim.
+"the agent cannot edit its own scorer" a test rather than a claim — and
+`test_tools.py` asserts the other half of it, that `write_file` refuses the path
+before anything is written: `..` traversal out of a real subdirectory, an absolute
+path, and a symlink pointing out of the sandbox, with the file outside checked
+afterwards to confirm it was not touched.
 
 ---
 
