@@ -1,0 +1,28 @@
+# The decision arithmetic and the agent's sandbox are the two things that must never
+# regress quietly, and neither needs a browser — so CI runs them on every push in a
+# few seconds. The Playwright loop itself is deliberately not run here: a full round
+# takes minutes and its value is the measurement, not a pass/fail.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: decision arithmetic and policy classification
+        run: python analyzer/test_stats.py
+
+      - name: agent sandbox
+        run: python agent/test_tools.py
+
+      - name: every module imports cleanly
+        run: |
+          python -m compileall -q agent analyzer orchestrator sim dashboard app
