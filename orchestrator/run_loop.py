@@ -42,6 +42,11 @@ DATA = ROOT / "data"
 STATE_PATH = DATA / "state.json"
 BASELINE_PORT = 8000
 CANDIDATE_PORT = 8001
+# Parallel browser workers per arm. Sessions are independent by construction, and the
+# simulator seeds each one from its index, so this changes wall-clock time and nothing
+# else — which is what makes a sample size large enough to resolve a 10pp win
+# affordable in a demo slot.
+WORKERS = 6
 
 SHOT_TARGETS = [("signup", "/signup"), ("payment", "/payment")]
 SHOT_VIEWPORTS = [("desktop", 1440, 900, False), ("mobile", 390, 844, True)]
@@ -180,6 +185,7 @@ def simulate(round_no: int, variant: str, n: int, seed: int, base_url: str, spli
         sys.executable, str(ROOT / "sim" / "simulator.py"),
         "--round", str(round_no), "--variant", variant, "--n", str(n),
         "--seed", str(seed), "--base-url", base_url, "--split", split, "--out", str(out),
+        "--workers", str(WORKERS),
     ])
     if proc.returncode != 0:
         raise RuntimeError(f"simulator failed for {variant}/{split}: {proc.stderr[-400:]}")
@@ -525,7 +531,7 @@ def run_until_target(target: float, max_rounds: int, n: int, seed: int,
 
 
 def main() -> None:
-    global BASELINE_PORT, CANDIDATE_PORT
+    global BASELINE_PORT, CANDIDATE_PORT, WORKERS
 
     ap = argparse.ArgumentParser(description="Run one or more improvement rounds")
     ap.add_argument("--round", type=int, help="run exactly this round")
@@ -537,6 +543,9 @@ def main() -> None:
                     help="hard stop when using --target (default 6)")
     ap.add_argument("--n", type=int, default=80, help="sessions per arm")
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--workers", type=int, default=WORKERS,
+                    help=f"parallel browser sessions per arm (default {WORKERS}; the "
+                         "results do not depend on it)")
     ap.add_argument("--baseline-port", type=int, default=BASELINE_PORT,
                     help=f"port for the baseline arm (default {BASELINE_PORT}; a free port is "
                          "chosen automatically if it is taken)")
@@ -547,6 +556,7 @@ def main() -> None:
     ap.add_argument("--reset", action="store_true", help="clear data/ and restore app/ from git before running")
     args = ap.parse_args()
 
+    WORKERS = max(1, args.workers)
     BASELINE_PORT = pick_port(args.baseline_port, "baseline")
     CANDIDATE_PORT = pick_port(args.candidate_port, "candidate")
 

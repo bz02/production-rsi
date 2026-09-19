@@ -22,14 +22,20 @@ Behaviour rules, per step:
 Unknown steps fall through to the generic handler: fill every required field, then
 click primary-action. That is what lets the agent add or remove funnel steps.
 
+Sessions run across parallel workers (`--workers`, default 4), each with its own
+browser and its own log shard. Every session's dice are seeded from its index rather
+than from a shared stream, so the output is identical whatever the worker count is —
+including 1.
+
 Usage:
   python sim/simulator.py --round 1 --variant control --n 80 --seed 7 \
-      --base-url http://127.0.0.1:8000 --split train
+      --base-url http://127.0.0.1:8000 --split train --workers 4
 """
 
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import os
 import random
@@ -334,13 +340,28 @@ def run_session(page: Any, persona: dict[str, Any], sid: str, session_no: int,
     return {"outcome": outcome, "persona": pid}
 
 
-def simulate(round_no: int, variant: str, n: int, seed: int, base_url: str,
-             out_path: Path, split: str = "train") -> dict[str, Any]:
-    cfg = load_personas()
-    # Seed is derived from (seed, variant, round) so the two arms get independent but
-    # reproducible user streams — reusing one stream across arms would correlate them.
+def session_plan(cfg: dict[str, Any], split: str, n: int, seed: int, variant: str,
+                 round_no: int) -> list[dict[str, Any]]:
+    """Who visits, in what order, with which dice — decided before any browser starts.
+
+    Each session carries its own seed derived from its index, so the result does not
+    depend on how many workers run the plan. That is a stronger reproducibility
+    property than one shared stream: with a single stream, a session's outcome
+    depends on how many random draws the sessions before it happened to make."""
     rng = random.Random(f"{seed}:{variant}:{round_no}:{split}")
-    log = EventLog(out_path, round_no, variant)
+    return [
+        {"index": i, "persona": persona, "seed": f"{seed}:{variant}:{round_no}:{split}:{i}"}
+        for i, persona in enumerate(weighted_personas(cfg, split, n, rng))
+    ]
+
+
+def run_shard(plan: list[dict[str, Any]], cfg: dict[str, Any], round_no: int, variant: str,
+              base_url: str, shard_path: Path) -> list[dict[str, Any]]:
+    """One worker: its own Playwright, its own browser, its own log shard.
+
+    Shards rather than a shared file handle — the workers never coordinate, and the
+    merge puts the sessions back in plan order afterwards."""
+    log = EventLog(shard_path, round_no, variant)
     results: list[dict[str, Any]] = []
 
     with sync_playwright() as pw:
@@ -353,7 +374,8 @@ def simulate(round_no: int, variant: str, n: int, seed: int, base_url: str,
         # between sessions so the sessions stay independent.
         contexts: dict[str, Any] = {}
         try:
-            for i, persona in enumerate(weighted_personas(cfg, split, n, rng)):
+            for item in plan:
+                persona = item["persona"]
                 pid = persona["id"]
                 if pid not in contexts:
                     w, h = persona["viewport"]
@@ -367,9 +389,11 @@ def simulate(round_no: int, variant: str, n: int, seed: int, base_url: str,
                     contexts[pid] = (ctx, pg)
                 context, page = contexts[pid]
                 context.clear_cookies()
-                sid = f"s_{i:04d}"
+                sid = f"s_{item['index']:04d}"
+                rng = random.Random(item["seed"])
                 try:
-                    results.append(run_session(page, persona, sid, i, base_url, log, cfg, rng))
+                    results.append(run_session(page, persona, sid, item["index"], base_url,
+                                               log, cfg, rng))
                 except Exception as exc:  # noqa: BLE001 — one bad session must not kill the round
                     log.emit(sid, pid, "http_error", "unknown", None, {"error": str(exc)[:200]})
                     log.emit(sid, pid, "session_end", "unknown", None, {
@@ -385,6 +409,68 @@ def simulate(round_no: int, variant: str, n: int, seed: int, base_url: str,
                     pass
             browser.close()
             log.close()
+    return results
+
+
+def merge_shards(shards: list[Path], out_path: Path) -> None:
+    """Concatenate the shards back into one log, in session order.
+
+    Session order, not wall-clock order: the analyzer reads a session's events in file
+    order, and interleaving by timestamp would scatter one session across the file for
+    no benefit."""
+    by_session: dict[str, list[str]] = {}
+    for shard in shards:
+        if not shard.exists():
+            continue
+        for line in shard.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                sid = json.loads(line)["session_id"]
+            except (json.JSONDecodeError, KeyError):
+                continue
+            by_session.setdefault(sid, []).append(line)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as fh:
+        for sid in sorted(by_session):
+            for line in by_session[sid]:
+                fh.write(line + "\n")
+    for shard in shards:
+        shard.unlink(missing_ok=True)
+
+
+def simulate(round_no: int, variant: str, n: int, seed: int, base_url: str,
+             out_path: Path, split: str = "train", workers: int = 1) -> dict[str, Any]:
+    """Run `n` sessions against `base_url` and write one log.
+
+    Sessions are independent by construction — a session is one shopper, cookies
+    cleared, own seed — so they parallelise cleanly. That matters for more than
+    patience: at n=80 per arm the design only detects a ~15pp move, and a real +10pp
+    win comes back p>0.1 and gets rolled back. Workers are what make a sample size
+    large enough to see the wins affordable in a demo slot."""
+    cfg = load_personas()
+    plan = session_plan(cfg, split, n, seed, variant, round_no)
+    workers = max(1, min(workers, len(plan) or 1))
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    # Round-robin rather than contiguous blocks: session cost varies a lot (an
+    # abandon at signup is quick, a blocked click burns three click timeouts), and
+    # striping keeps the workers finishing together.
+    slices = [plan[i::workers] for i in range(workers)]
+    shards = [out_path.with_suffix(f".shard{i}.jsonl") for i in range(workers)]
+
+    results: list[dict[str, Any]] = []
+    if workers == 1:
+        results = run_shard(slices[0], cfg, round_no, variant, base_url, shards[0])
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [
+                pool.submit(run_shard, sl, cfg, round_no, variant, base_url, shard)
+                for sl, shard in zip(slices, shards)
+            ]
+            for fut in futures:
+                results.extend(fut.result())
+    merge_shards(shards, out_path)
 
     converted = sum(1 for r in results if r["outcome"] == "converted")
     return {
@@ -392,6 +478,7 @@ def simulate(round_no: int, variant: str, n: int, seed: int, base_url: str,
         "n": len(results),
         "conversions": converted,
         "conversion_rate": round(converted / max(1, len(results)), 4),
+        "workers": workers,
         "log": str(out_path),
     }
 
@@ -404,12 +491,16 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--base-url", default="http://127.0.0.1:8000")
     ap.add_argument("--split", choices=["train", "holdout"], default="train")
+    ap.add_argument("--workers", type=int, default=int(os.environ.get("FLYWHEEL_WORKERS", "4")),
+                    help="parallel browser workers (default 4; results are identical "
+                         "whatever this is set to)")
     ap.add_argument("--out")
     args = ap.parse_args()
 
     suffix = "" if args.split == "train" else f".{args.split}"
     out = Path(args.out) if args.out else ROOT / "data" / "logs" / f"round_{args.round}" / f"{args.variant}{suffix}.jsonl"
-    summary = simulate(args.round, args.variant, args.n, args.seed, args.base_url, out, args.split)
+    summary = simulate(args.round, args.variant, args.n, args.seed, args.base_url, out,
+                       args.split, args.workers)
     print(json.dumps(summary, indent=2))
 
 
