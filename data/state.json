@@ -1,5 +1,5 @@
 {
-  "current_round": 0,
+  "current_round": 1,
   "phase": "running_ab",
   "phase_options": [
     "analyzing",
@@ -8,13 +8,100 @@
     "decided",
     "idle"
   ],
-  "conversion_series": [],
-  "rounds": [],
+  "conversion_series": [
+    {
+      "round": 0,
+      "control": 0.2375
+    }
+  ],
+  "rounds": [
+    {
+      "round": 0,
+      "title": "Baseline measurement",
+      "status": "baseline",
+      "autonomy": "n/a",
+      "lift_rel": null,
+      "p_value": null,
+      "before_img": "runs/round_0/before_mobile.png",
+      "after_img": null,
+      "diff_path": null,
+      "metrics_path": "metrics/round_0.json",
+      "conversion": {
+        "control": 0.2375,
+        "treatment": null
+      },
+      "hypotheses": [],
+      "change_md": null,
+      "smoke": {
+        "passed": true,
+        "pass_count": 0,
+        "case_count": 0
+      },
+      "top_friction": [
+        {
+          "type": "abandon_reason",
+          "value": "too_many_fields",
+          "count": 44,
+          "step": "signup",
+          "field_count": 8
+        },
+        {
+          "type": "abandon_reason",
+          "value": "blocked",
+          "count": 9,
+          "step": "payment"
+        },
+        {
+          "type": "blocked_click",
+          "value": "click_intercepted",
+          "count": 9,
+          "step": "payment",
+          "device": "mobile"
+        },
+        {
+          "type": "abandon_reason",
+          "value": "forced_signup",
+          "count": 8,
+          "step": "signup"
+        },
+        {
+          "type": "validation_error",
+          "value": "field_rejected",
+          "count": 3,
+          "step": "signup"
+        }
+      ]
+    }
+  ],
   "timeline": [
     {
       "ts": 1789850799.389531,
       "msg": "Round 0: measuring the untouched baseline over 80 sessions"
+    },
+    {
+      "ts": 1789850987.0218096,
+      "msg": "Round 0 baseline conversion 23.8%; top friction: too_many_fields, blocked, click_intercepted"
+    },
+    {
+      "ts": 1789850987.0222356,
+      "msg": "Round 1: agent reading round 0 summary"
+    },
+    {
+      "ts": 1789850987.0876722,
+      "msg": "Agent proposed 3 hypotheses (heuristic ranking), selected: Cut the signup form to four fields"
+    },
+    {
+      "ts": 1789850987.0898347,
+      "msg": "Diff written: 1 file(s) changed"
+    },
+    {
+      "ts": 1789850989.5778043,
+      "msg": "Eval gate: 5/5 cases passed -> PASS"
+    },
+    {
+      "ts": 1789850994.1090906,
+      "msg": "Running A/B: 80 sessions per arm"
     }
   ],
-  "updated_at": 1789850799.3895876
+  "updated_at": 1789850994.1092172
 }

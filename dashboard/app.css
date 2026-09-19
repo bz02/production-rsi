@@ -116,8 +116,10 @@ main.wrap { padding-top: 22px; padding-bottom: 60px; display: grid; gap: 18px; }
 .lift-up { fill: var(--good); }
 .lift-down { fill: var(--bad); }
 .round-tick { fill: var(--muted); font: 11px ui-sans-serif, sans-serif; }
-.adopt-band { fill: var(--good-soft); }
-.pending-band { fill: var(--warn-soft); }
+.adopt-band { fill: var(--good); opacity: .75; }
+.pending-band { fill: var(--warn); opacity: .75; }
+.outcome-tag { font: 700 9.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.pending-text { fill: var(--warn); }
 
 .holdout-row {
   display: flex; align-items: center; gap: 10px 22px; flex-wrap: wrap;

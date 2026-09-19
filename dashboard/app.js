@@ -62,25 +62,29 @@ function renderChart(state) {
     return;
   }
 
-  const W = 1080, H = 320, padL = 54, padR = 30, padT = 34, padB = 44;
+  const W = 1080, H = 320, padL = 54, padR = 42, padT = 40, padB = 56;
   const vals = series.flatMap((p) => [p.control, p.treatment]).filter((v) => v != null);
   const holdouts = (state.rounds || []).flatMap((r) => Object.values(r.holdout || {})).filter((v) => v != null);
-  const maxV = Math.max(0.1, ...vals, ...holdouts) * 1.22;
+  const peak = Math.max(0.1, ...vals, ...holdouts);
+  // Round the axis up to a clean 10% step so the gridline labels read as percentages
+  // a human would choose, not as fractions of an arbitrary maximum.
+  const maxV = Math.min(1, Math.ceil((peak * 1.18) / 0.1) * 0.1);
   const x = (i) => padL + (series.length === 1 ? (W - padL - padR) / 2 : (i * (W - padL - padR)) / (series.length - 1));
   const y = (v) => H - padB - (v / maxV) * (H - padT - padB);
 
   const parts = [];
-  // y grid
-  const ticks = 4;
+  const ticks = Math.round(maxV / 0.1);
   for (let t = 0; t <= ticks; t++) {
-    const v = (maxV / ticks) * t;
+    const v = t * 0.1;
     parts.push(`<line class="grid-line" x1="${padL}" y1="${y(v)}" x2="${W - padR}" y2="${y(v)}"/>`);
     parts.push(`<text class="axis-label" x="${padL - 10}" y="${y(v) + 3.5}" text-anchor="end">${(v * 100).toFixed(0)}%</text>`);
   }
-  // adopted / pending bands behind the point
+  // Outcome marker under the axis rather than a full-height band: the chart is about
+  // the rates, and a column tall enough to tint the plot area competes with them.
   series.forEach((p, i) => {
     if (!p.adopted && !p.pending) return;
-    parts.push(`<rect class="${p.adopted ? 'adopt-band' : 'pending-band'}" x="${x(i) - 22}" y="${padT - 12}" width="44" height="${H - padT - padB + 12}" rx="8"/>`);
+    parts.push(`<rect class="${p.adopted ? 'adopt-band' : 'pending-band'}" x="${x(i) - 26}" y="${H - padB + 26}" width="52" height="5" rx="2.5"/>`);
+    parts.push(`<text class="outcome-tag ${p.adopted ? 'lift-up' : 'pending-text'}" x="${x(i)}" y="${H - padB + 45}" text-anchor="middle">${p.adopted ? 'adopted' : 'pending'}</text>`);
   });
   // control line
   const ctrlPts = series.map((p, i) => `${x(i)},${y(p.control ?? 0)}`).join(' ');
@@ -96,18 +100,27 @@ function renderChart(state) {
   }
   // points + labels
   series.forEach((p, i) => {
-    parts.push(`<circle class="pt pt-control" cx="${x(i)}" cy="${y(p.control ?? 0)}" r="5"/>`);
-    parts.push(`<text class="axis-label" x="${x(i)}" y="${y(p.control ?? 0) + 19}" text-anchor="middle">${pct(p.control, 0)}</text>`);
+    const cx = x(i);
+    const cy = y(p.control ?? 0);
+    parts.push(`<circle class="pt pt-control" cx="${cx}" cy="${cy}" r="5"/>`);
     if (p.treatment != null) {
-      parts.push(`<circle class="pt pt-treat" cx="${x(i)}" cy="${y(p.treatment)}" r="5.5"/>`);
+      const ty = y(p.treatment);
+      parts.push(`<circle class="pt pt-treat" cx="${cx}" cy="${ty}" r="5.5"/>`);
       const rel = p.control > 0 ? (p.treatment - p.control) / p.control : 0;
       const up = p.treatment >= p.control;
-      parts.push(`<text class="lift-tag ${up ? 'lift-up' : 'lift-down'}" x="${x(i)}" y="${y(p.treatment) - 13}" text-anchor="middle">${up ? '+' : ''}${(rel * 100).toFixed(0)}%</text>`);
+      // Put the treatment tag on the far side of the control point so the two
+      // labels cannot collide when the arms land close together.
+      const tagY = up ? ty - 13 : ty + 20;
+      parts.push(`<text class="lift-tag ${up ? 'lift-up' : 'lift-down'}" x="${cx}" y="${tagY}" text-anchor="middle">${up ? '+' : ''}${(rel * 100).toFixed(0)}%</text>`);
+      parts.push(`<text class="axis-label" x="${cx}" y="${up ? cy + 19 : cy - 12}" text-anchor="middle">${pct(p.control, 0)}</text>`);
+    } else {
+      parts.push(`<text class="axis-label" x="${cx}" y="${cy + 19}" text-anchor="middle">${pct(p.control, 0)}</text>`);
     }
     const hold = (state.rounds || []).find((r) => r.round === p.round)?.holdout;
     const hv = hold ? (hold.treatment ?? hold.control) : null;
-    if (hv != null) parts.push(`<circle class="pt pt-hold" cx="${x(i) + 13}" cy="${y(hv)}" r="4"/>`);
-    parts.push(`<text class="round-tick" x="${x(i)}" y="${H - padB + 20}" text-anchor="middle">R${p.round}</text>`);
+    // Keep the holdout marker inside the plot on the last round.
+    if (hv != null) parts.push(`<circle class="pt pt-hold" cx="${Math.min(cx + 13, W - padR - 4)}" cy="${y(hv)}" r="4"/>`);
+    parts.push(`<text class="round-tick" x="${cx}" y="${H - padB + 20}" text-anchor="middle">R${p.round}</text>`);
   });
 
   host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${parts.join('')}</svg>`;
