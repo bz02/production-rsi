@@ -135,8 +135,16 @@ bundle.
   → **invalid**, rolled back on principle
 
 So the same loop ships a CSS fix unattended and stops for a human on an auth change.
-The third rule has never fired, and that is the point: it is the mechanism that would
-catch an agent editing its own scorer.
+The third rule has never fired in a real round, and that is the point: it is the
+mechanism that would catch an agent editing its own scorer, and there is a test for
+it precisely because it should never fire by accident.
+
+One deliberate addition to the frozen policy: `app/server.py` is listed under
+`needs_approval_paths` even though the auto-adopt allowlist already routes it to a
+human (it is neither `templates/**` nor `static/**`). The verdict is identical either
+way — verified against the spec-literal policy — so this only changes the wording of
+the reason the dashboard shows, from "outside the auto-adopt allowlist" to "touches
+app/server.py".
 
 ---
 
