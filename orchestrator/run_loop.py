@@ -22,6 +22,7 @@ import argparse
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -47,6 +48,26 @@ SHOT_VIEWPORTS = [("desktop", 1440, 900, False), ("mobile", 390, 844, True)]
 
 
 # ------------------------------------------------------------------- server plumbing
+
+def pick_port(preferred: int, label: str) -> int:
+    """The documented port when it is free, an ephemeral one when it is not.
+
+    A developer machine very often already has something on :8000, and failing a
+    twenty-minute run over that is noise rather than signal. Nothing in the loop
+    depends on the numbers: the simulator, the smoke gate and the screenshotter are
+    all handed the instance's own URL."""
+    with socket.socket() as probe:
+        try:
+            probe.bind(("127.0.0.1", preferred))
+            return preferred
+        except OSError:
+            pass
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = int(probe.getsockname()[1])
+    print(f"  · :{preferred} is in use; serving the {label} arm on :{port} instead", flush=True)
+    return port
+
 
 class Instance:
     """A running copy of the shop, on its own port, serving its own tree."""
@@ -504,6 +525,8 @@ def run_until_target(target: float, max_rounds: int, n: int, seed: int,
 
 
 def main() -> None:
+    global BASELINE_PORT, CANDIDATE_PORT
+
     ap = argparse.ArgumentParser(description="Run one or more improvement rounds")
     ap.add_argument("--round", type=int, help="run exactly this round")
     ap.add_argument("--rounds", type=int, help="run rounds 0..N in sequence")
@@ -514,10 +537,18 @@ def main() -> None:
                     help="hard stop when using --target (default 6)")
     ap.add_argument("--n", type=int, default=80, help="sessions per arm")
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--baseline-port", type=int, default=BASELINE_PORT,
+                    help=f"port for the baseline arm (default {BASELINE_PORT}; a free port is "
+                         "chosen automatically if it is taken)")
+    ap.add_argument("--candidate-port", type=int, default=CANDIDATE_PORT,
+                    help=f"port for the candidate arm (default {CANDIDATE_PORT})")
     ap.add_argument("--auto-approve", action="store_true",
                     help="stand in for a human clicking Approve, for unattended runs")
     ap.add_argument("--reset", action="store_true", help="clear data/ and restore app/ from git before running")
     args = ap.parse_args()
+
+    BASELINE_PORT = pick_port(args.baseline_port, "baseline")
+    CANDIDATE_PORT = pick_port(args.candidate_port, "candidate")
 
     if args.reset:
         for sub in ("logs", "runs", "metrics", "analysis"):
