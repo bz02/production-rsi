@@ -105,6 +105,22 @@ v = classify(evaluator_change)
 check("editing the analyzer is invalid", v["verdict"] == "invalid", v["verdict"])
 check("and is reported as a protected-path hit", v["protected_paths_touched"])
 
+# The header line a real run produces, flags and all. Reading the first token after
+# `diff -ru` as a filename invented `--exclude=__pycache__`, which is outside the
+# auto-adopt allowlist, so a clean templates-only round asked for a human instead of
+# shipping itself. That is the autonomy claim failing quietly, so it gets a test.
+real_header = """diff -ru --exclude=__pycache__ --exclude=*.pyc app/templates/signup.html candidate/templates/signup.html
+--- app/templates/signup.html	2026-09-19 12:00:00.000000000 +0100
++++ candidate/templates/signup.html	2026-09-19 12:05:00.000000000 +0100
+@@ -1,3 +1,3 @@
+-  {% for f in fields %}
++  {% for f in fields[:4] %}
+"""
+v = classify(real_header)
+check("diff flags are not mistaken for filenames",
+      v["files"] == ["app/templates/signup.html"], str(v["files"]))
+check("a real diff header still auto-adopts", v["verdict"] == "auto", v["verdict"])
+
 oversized = "".join(
     f"diff -ru app/templates/p{i}.html candidate/templates/p{i}.html\n+line\n" for i in range(9)
 )

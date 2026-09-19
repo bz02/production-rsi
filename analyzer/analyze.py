@@ -248,24 +248,40 @@ def load_policy() -> dict[str, Any]:
     return json.loads((ROOT / "agent" / "policy.json").read_text())
 
 
+def _normalise(path: str) -> str:
+    """`diff -ru app candidate` prints `candidate/templates/signup.html`; the policy
+    is written against `app/templates/signup.html`."""
+    path = re.sub(r"^(?:a/|b/)", "", path)
+    path = re.sub(r"^candidate/", "app/", path)
+    if not path.startswith("app/") and "app/" in path:
+        path = "app/" + path.split("app/")[-1]
+    return path
+
+
 def changed_files(diff_path: Path) -> list[str]:
-    """Paths touched by the round's diff, normalised to repo-relative app paths."""
+    """Paths touched by the round's diff, normalised to repo-relative app paths.
+
+    The header line is `diff -ru --exclude=__pycache__ app/x candidate/x`: the flags
+    come first and the paths last, so the token straight after `diff -ru` is a flag,
+    not a file. Reading it as one invented a path outside the auto-adopt allowlist and
+    sent a clean templates-only round to a human for approval — the one decision in
+    the loop that has to be right for the autonomy claim to mean anything."""
     if not diff_path.exists():
         return []
     files: set[str] = set()
     for line in diff_path.read_text(encoding="utf-8", errors="replace").splitlines():
-        m = re.match(r"^(?:diff -[a-zA-Z]+ |\+\+\+ |--- )(\S+)", line)
-        if not m:
+        if line.startswith("diff "):
+            tokens = [t for t in line.split()[1:] if not t.startswith("-")]
+        elif line.startswith("+++ ") or line.startswith("--- "):
+            # `+++ candidate/templates/signup.html\t2026-09-19 14:02:11` — the
+            # timestamp after the tab is not part of the path.
+            tokens = line.split("\t")[0].split()[1:2]
+        else:
             continue
-        path = m.group(1)
-        if path in ("/dev/null",):
-            continue
-        # `diff -ru app candidate` prints paths like `candidate/templates/signup.html`
-        path = re.sub(r"^(?:a/|b/)", "", path)
-        path = re.sub(r"^candidate/", "app/", path)
-        if not path.startswith("app/"):
-            path = "app/" + path.split("app/")[-1] if "app/" in path else path
-        files.add(path)
+        for path in tokens:
+            if path == "/dev/null":
+                continue
+            files.add(_normalise(path))
     return sorted(files)
 
 
