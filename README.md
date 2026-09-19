@@ -49,9 +49,20 @@ python orchestrator/run_loop.py --rounds 3 --n 80 --seed 7
 python dashboard/server.py        # http://127.0.0.1:8080
 ```
 
-Useful flags: `--round N` (one round only), `--n` (sessions per arm),
-`--auto-approve` (stand in for a human clicking Approve on an unattended run),
-`--reset` (clear `data/` and restore `app/` from git).
+Or let it decide how many rounds it needs:
+
+```bash
+python orchestrator/run_loop.py --target 0.55 --max-rounds 6 --n 80 --seed 7
+```
+
+Rounds then stop being a budget to spend and become attempts at a number: the loop
+keeps proposing, shipping and measuring until the baseline conversion clears the
+target, and stops at `--max-rounds` if it cannot — because a loop that cannot reach
+its target needs a human to hear about it rather than to keep burning.
+
+Useful flags: `--round N` (one round only), `--rounds N` (a fixed count), `--n`
+(sessions per arm), `--auto-approve` (stand in for a human clicking Approve on an
+unattended run), `--reset` (clear `data/` and restore `app/` from git).
 
 The seed is fixed, so a run reproduces exactly — same personas, same order, same
 assignment. That is a property worth stating out loud rather than hiding: it is what
@@ -205,6 +216,20 @@ ambiguous.
   chips, before/after screenshots at both viewports, and `diff.patch` and `change.md`
   inline.
 - **Approve / Reject** for any round the policy reserved for a human.
+
+---
+
+## Tests
+
+```bash
+python analyzer/test_stats.py
+```
+
+20 checks over the arithmetic that decides things: the z-test (including the
+interface document's own claim that 30% vs 45% at n=80 lands at p≈0.05), the
+degenerate cases, and policy classification from real diff text — including that a
+diff editing `analyzer/analyze.py` comes back `invalid`. That last one is what makes
+"the agent cannot edit its own scorer" a test rather than a claim.
 
 ---
 

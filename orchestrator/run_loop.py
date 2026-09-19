@@ -13,6 +13,7 @@ directory.
   python orchestrator/run_loop.py --round 0 --n 80 --seed 7      # baseline only
   python orchestrator/run_loop.py --round 1 --n 80 --seed 7      # a full round
   python orchestrator/run_loop.py --rounds 3 --n 80 --seed 7     # 0,1,2,3 in sequence
+  python orchestrator/run_loop.py --target 0.55 --max-rounds 6   # keep going until it converges
 """
 
 from __future__ import annotations
@@ -459,10 +460,58 @@ def apply_approval(round_no: int, approve: bool) -> dict[str, Any]:
     return {"ok": True, "round": round_no, "status": entry["status"]}
 
 
+def current_baseline(state: dict[str, Any]) -> float | None:
+    """Conversion of whatever is now serving as the baseline: the most recent adopted
+    treatment, or the last measured control if nothing has been adopted."""
+    series = state.get("conversion_series") or []
+    if not series:
+        return None
+    adopted = [p for p in series if p.get("adopted") and p.get("treatment") is not None]
+    if adopted:
+        return adopted[-1]["treatment"]
+    return series[-1].get("control")
+
+
+def run_until_target(target: float, max_rounds: int, n: int, seed: int,
+                     state: dict[str, Any], auto_approve: bool) -> dict[str, Any]:
+    """Keep proposing, shipping and measuring until the baseline clears `target`.
+
+    This is the shape the loop is meant to have: rounds are not a budget to spend but
+    attempts at a number. It still stops at `max_rounds`, because a loop that cannot
+    reach its target needs a human to hear about it rather than to keep burning."""
+    if not any(p["round"] == 0 for p in state.get("conversion_series", [])):
+        run_round_zero(n, seed, state)
+
+    outcome = {"target": target, "reached": False, "rounds_run": 0}
+    for r in range(1, max_rounds + 1):
+        baseline = current_baseline(state)
+        if baseline is not None and baseline >= target:
+            outcome.update(reached=True, final=baseline, rounds_run=r - 1)
+            note(state, f"Target reached: baseline {baseline:.1%} >= {target:.1%} after {r - 1} round(s)")
+            return outcome
+        note(state, f"Baseline {(baseline or 0):.1%} is short of the {target:.1%} target; starting round {r}")
+        run_round(r, n, seed, state, auto_approve)
+        outcome["rounds_run"] = r
+
+    final = current_baseline(state)
+    outcome.update(reached=bool(final is not None and final >= target), final=final)
+    if outcome["reached"]:
+        note(state, f"Target reached: baseline {final:.1%} >= {target:.1%}")
+    else:
+        note(state, f"Stopped at the {max_rounds}-round limit with the baseline at "
+                    f"{(final or 0):.1%}, short of the {target:.1%} target")
+    return outcome
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Run one or more improvement rounds")
     ap.add_argument("--round", type=int, help="run exactly this round")
     ap.add_argument("--rounds", type=int, help="run rounds 0..N in sequence")
+    ap.add_argument("--target", type=float,
+                    help="keep running rounds until the baseline conversion reaches this "
+                         "(e.g. 0.55), instead of a fixed round count")
+    ap.add_argument("--max-rounds", type=int, default=6,
+                    help="hard stop when using --target (default 6)")
     ap.add_argument("--n", type=int, default=80, help="sessions per arm")
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--auto-approve", action="store_true",
@@ -480,7 +529,11 @@ def main() -> None:
     state = load_state()
     started = time.time()
 
-    if args.rounds is not None:
+    target_outcome: dict[str, Any] | None = None
+    if args.target is not None:
+        target_outcome = run_until_target(args.target, args.max_rounds, args.n, args.seed,
+                                          state, args.auto_approve)
+    elif args.rounds is not None:
         run_round_zero(args.n, args.seed, state)
         for r in range(1, args.rounds + 1):
             run_round(r, args.n, args.seed, state, args.auto_approve)
@@ -489,7 +542,7 @@ def main() -> None:
     elif args.round is not None:
         run_round(args.round, args.n, args.seed, state, args.auto_approve)
     else:
-        ap.error("pass --round N or --rounds N")
+        ap.error("pass --round N, --rounds N, or --target RATE")
 
     set_phase(state, state["current_round"], "idle")
     series = state["conversion_series"]
@@ -498,6 +551,15 @@ def main() -> None:
         t = f" treatment {p['treatment']:.1%}" if p.get("treatment") is not None else ""
         flag = " [adopted]" if p.get("adopted") else (" [pending]" if p.get("pending") else "")
         print(f"  round {p['round']}: control {p['control']:.1%}{t}{flag}")
+
+    base = series[0]["control"] if series else None
+    final = current_baseline(state)
+    if base and final:
+        print(f"  baseline moved {base:.1%} -> {final:.1%} ({(final - base) / base:+.0%} relative)")
+    if target_outcome:
+        verdict = "REACHED" if target_outcome["reached"] else "NOT REACHED"
+        print(f"  target {target_outcome['target']:.1%}: {verdict} "
+              f"after {target_outcome['rounds_run']} round(s)")
 
 
 if __name__ == "__main__":
