@@ -75,7 +75,16 @@ def _ctx(step: str, **extra: object) -> dict[str, object]:
 
 
 def _missing(fields: list[dict], form: dict) -> list[str]:
-    return [f["name"] for f in fields if f["required"] and not (form.get(f["name"]) or "").strip()]
+    """Validate what was actually submitted.
+
+    A required field the template does not render is not validated — ordinary HTML
+    form behaviour, and it means a form can be shortened by editing the template
+    alone. A rendered field left blank is still caught."""
+    return [
+        f["name"]
+        for f in fields
+        if f["required"] and f["name"] in form and not (form.get(f["name"]) or "").strip()
+    ]
 
 
 @app.after_request

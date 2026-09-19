@@ -332,6 +332,29 @@ def analyze_round(round_no: int, smoke_pass: bool = True, diff_path: Path | None
     policy = load_policy()
     autonomy = classify_autonomy(diff_path or (data / "runs" / f"round_{round_no}" / "diff.patch"), policy)
 
+    if t is None and round_no > 0:
+        # No treatment data on a real round means the candidate never reached live
+        # traffic — the eval gate blocked it, or it touched a protected path. That is
+        # an `invalid` round, not a baseline measurement.
+        why = ("the candidate failed the eval gate" if not smoke_pass
+               else f"the candidate touched protected paths: {', '.join(autonomy['protected_hits'])}"
+               if autonomy["protected_paths_touched"]
+               else "no treatment traffic was recorded")
+        return {
+            "round": round_no,
+            "n_per_arm": c["n"],
+            "control": c,
+            "treatment": None,
+            "comparison": None,
+            "guardrails": {"smoke_test": smoke_pass, "http_error_delta": 0.0,
+                           "protected_paths_touched": autonomy["protected_paths_touched"],
+                           "pass": False},
+            "decision": "invalid",
+            "decision_reason": f"Rolled back as invalid — {why}; no customer saw the change.",
+            "autonomy": autonomy["verdict"],
+            "diff": autonomy,
+        }
+
     if t is None:
         # Round 0: baseline only, nothing to decide.
         result: dict[str, Any] = {
