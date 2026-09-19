@@ -80,10 +80,12 @@ Useful flags: `--round N` (one round only), `--rounds N` (a fixed count), `--n`
 unattended run), `--reset` (clear `data/` and restore `app/` from git),
 `--baseline-port` / `--candidate-port` (the arms default to :8000 and :8001 and fall
 back to a free port when those are taken, so a machine that already has something on
-:8000 does not fail a twenty-minute run).
+:8000 does not fail a twenty-minute run), `--workers` (parallel browser sessions per
+arm, default 6).
 
 The seed is fixed, so a run reproduces exactly — same personas, same order, same
-assignment. That is a property worth stating out loud rather than hiding: it is what
+assignment, and the same result at any `--workers` setting, because each session
+draws from a seed derived from its own index rather than from a shared stream. That is a property worth stating out loud rather than hiding: it is what
 makes a regression in this loop debuggable.
 
 ---
@@ -104,6 +106,7 @@ agent/test_tools.py       the agent's sandbox, under test
 orchestrator/run_loop.py  chains one round together and owns all state
 dashboard/                static page + tiny API, polls data/state.json every 2s
 data/                     logs, metrics, analysis, per-round artifacts, state.json
+.github/workflows/ci.yml  both test suites on every push; no browser, a few seconds
 ```
 
 ---

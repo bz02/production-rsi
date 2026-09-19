@@ -10,9 +10,9 @@ A/B is two whole instances rather than a feature flag: baseline on :8000 serves
 and never has to reason about flag plumbing, and "roll back" is just discarding a
 directory.
 
-  python orchestrator/run_loop.py --round 0 --n 80 --seed 7      # baseline only
-  python orchestrator/run_loop.py --round 1 --n 80 --seed 7      # a full round
-  python orchestrator/run_loop.py --rounds 3 --n 80 --seed 7     # 0,1,2,3 in sequence
+  python orchestrator/run_loop.py --round 0 --n 200 --seed 7     # baseline only
+  python orchestrator/run_loop.py --round 1 --n 200 --seed 7     # a full round
+  python orchestrator/run_loop.py --rounds 3 --n 200 --seed 7    # 0,1,2,3 in sequence
   python orchestrator/run_loop.py --target 0.55 --max-rounds 6   # keep going until it converges
 """
 
@@ -541,7 +541,9 @@ def main() -> None:
                          "(e.g. 0.55), instead of a fixed round count")
     ap.add_argument("--max-rounds", type=int, default=6,
                     help="hard stop when using --target (default 6)")
-    ap.add_argument("--n", type=int, default=80, help="sessions per arm")
+    ap.add_argument("--n", type=int, default=200,
+                    help="sessions per arm (default 200: at 80 the design cannot "
+                         "resolve a 10pp win, which is the size of the wins here)")
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--workers", type=int, default=WORKERS,
                     help=f"parallel browser sessions per arm (default {WORKERS}; the "
