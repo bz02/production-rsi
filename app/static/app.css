@@ -169,16 +169,30 @@ main.shell { padding-top: 26px; padding-bottom: 60px; }
 }
 
 @media (max-width: 560px) {
-  .promo-bar {
+  .promo-in { padding: 14px 20px; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .promo-link { margin-left: 0; }
+  main.shell { padding-bottom: 14px; }
+}
+
+/* Mobile checkout pins the amount due to the bottom of the screen, because the
+   order summary scrolls out of view once the card fields have focus. */
+.paybar { display: none; }
+
+@media (max-width: 560px) {
+  .paybar {
+    display: block;
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 60;
-    border-bottom: 0;
-    box-shadow: 0 -6px 18px rgba(23, 20, 15, 0.12);
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -8px 20px rgba(23, 20, 15, 0.14);
   }
-  .promo-in { padding: 16px 20px 20px; flex-direction: column; align-items: flex-start; gap: 4px; }
-  .promo-link { margin-left: 0; }
-  main.shell { padding-bottom: 12px; }
+  .paybar-in { display: grid; gap: 3px; padding: 14px 20px 18px; }
+  .paybar-total { display: flex; justify-content: space-between; align-items: baseline; }
+  .paybar-total b { font-size: 19px; color: var(--ink); }
+  .paybar-note { font-size: 12px; color: var(--muted); }
+  .paybar-note strong { color: var(--ok); font-weight: 650; }
 }

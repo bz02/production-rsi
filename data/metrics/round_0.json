@@ -1,54 +1,54 @@
 {
   "round": 0,
-  "n_per_arm": 20,
+  "n_per_arm": 24,
   "control": {
-    "n": 20,
-    "conversions": 9,
-    "conversion_rate": 0.45,
-    "avg_steps": 5.35,
-    "avg_duration_s": 1.5,
+    "n": 24,
+    "conversions": 6,
+    "conversion_rate": 0.25,
+    "avg_steps": 3.83,
+    "avg_duration_s": 4.2,
     "http_error_rate": 0.0,
-    "blocked_click_rate": 0.0,
+    "blocked_click_rate": 0.4583,
     "funnel": [
       {
         "step": "landing",
-        "reached": 20,
+        "reached": 24,
         "dropped": 0,
         "drop_rate": 0.0
       },
       {
         "step": "product",
-        "reached": 20,
-        "dropped": 0,
-        "drop_rate": 0.0
+        "reached": 24,
+        "dropped": 11,
+        "drop_rate": 0.4583
       },
       {
         "step": "cart",
-        "reached": 20,
+        "reached": 13,
         "dropped": 0,
         "drop_rate": 0.0
       },
       {
         "step": "signup",
-        "reached": 20,
-        "dropped": 11,
-        "drop_rate": 0.55
+        "reached": 13,
+        "dropped": 7,
+        "drop_rate": 0.5385
       },
       {
         "step": "shipping",
-        "reached": 9,
+        "reached": 6,
         "dropped": 0,
         "drop_rate": 0.0
       },
       {
         "step": "payment",
-        "reached": 9,
+        "reached": 6,
         "dropped": 0,
         "drop_rate": 0.0
       },
       {
         "step": "confirmation",
-        "reached": 9,
+        "reached": 6,
         "dropped": 0,
         "drop_rate": 0.0
       }
@@ -56,8 +56,8 @@
     "by_persona": {
       "careful_desktop": {
         "n": 5,
-        "conversions": 5,
-        "conversion_rate": 1.0,
+        "conversions": 4,
+        "conversion_rate": 0.8,
         "device": "desktop"
       },
       "impatient_desktop": {
@@ -67,9 +67,9 @@
         "device": "desktop"
       },
       "novice_mobile": {
-        "n": 7,
-        "conversions": 2,
-        "conversion_rate": 0.2857,
+        "n": 11,
+        "conversions": 0,
+        "conversion_rate": 0.0,
         "device": "mobile"
       }
     }
@@ -83,7 +83,7 @@
     "pass": true
   },
   "decision": "baseline",
-  "decision_reason": "Round 0 baseline only: conversion 45.0% over 20 sessions.",
+  "decision_reason": "Round 0 baseline only: conversion 25.0% over 24 sessions.",
   "autonomy": "n/a",
   "diff": {
     "verdict": "auto",
@@ -96,5 +96,8 @@
     "outside_allowlist": [],
     "over_file_limit": false,
     "over_line_limit": false
+  },
+  "holdout": {
+    "control": 0.25
   }
 }

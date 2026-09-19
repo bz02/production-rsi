@@ -32,8 +32,10 @@
   {% block body %}{% endblock %}
 </main>
 
-<!-- Site-wide seasonal offer bar. Sticks to the bottom on phones so it stays
-     visible while customers scroll the catalogue. -->
+{# Distraction-free payment step: the offer bar and the footer links are dropped
+   once the customer is entering card details, so nothing competes with paying. #}
+{% if step != 'payment' %}
+<!-- Site-wide seasonal offer bar, shown on every step except payment. -->
 <aside class="promo-bar" data-testid="promo-bar">
   <div class="shell promo-in">
     <strong>Free next-day delivery</strong>
@@ -46,5 +48,6 @@
 <footer class="foot">
   <div class="shell">Nimbus Supply &middot; Returns &middot; Help &middot; &copy; 2026</div>
 </footer>
+{% endif %}
 </body>
 </html>

@@ -234,8 +234,8 @@ def run_session(page: Any, persona: dict[str, Any], sid: str, session_no: int,
         return {"outcome": "abandoned", "persona": pid}
 
     for _ in range(MAX_STEPS):
-        # Human-ish dwell time. Kept small so a full round finishes in a demo slot.
-        page.wait_for_timeout(rng.randint(delay_lo, delay_hi) // 6)
+        # Human-ish dwell time, scaled down so a full round finishes in a demo slot.
+        page.wait_for_timeout(min(150, rng.randint(delay_lo, delay_hi) // 10))
 
         body = page.query_selector("body")
         step = (body.get_attribute("data-step") if body else None) or "unknown"
@@ -343,29 +343,41 @@ def simulate(round_no: int, variant: str, n: int, seed: int, base_url: str,
         if CHROME_PATH:
             launch_kwargs["executable_path"] = CHROME_PATH
         browser = pw.chromium.launch(**launch_kwargs)
+        # One context per persona, reused across that persona's sessions. Creating a
+        # context costs about as much as a whole session, and cookies are cleared
+        # between sessions so the sessions stay independent.
+        contexts: dict[str, Any] = {}
         try:
             for i, persona in enumerate(weighted_personas(cfg, split, n, rng)):
-                w, h = persona["viewport"]
-                context = browser.new_context(
-                    viewport={"width": w, "height": h},
-                    is_mobile=persona["device"] == "mobile",
-                    has_touch=persona["device"] in ("mobile", "tablet"),
-                )
-                page = context.new_page()
-                page.set_default_timeout(CLICK_TIMEOUT_MS)
+                pid = persona["id"]
+                if pid not in contexts:
+                    w, h = persona["viewport"]
+                    ctx = browser.new_context(
+                        viewport={"width": w, "height": h},
+                        is_mobile=persona["device"] == "mobile",
+                        has_touch=persona["device"] in ("mobile", "tablet"),
+                    )
+                    pg = ctx.new_page()
+                    pg.set_default_timeout(CLICK_TIMEOUT_MS)
+                    contexts[pid] = (ctx, pg)
+                context, page = contexts[pid]
+                context.clear_cookies()
                 sid = f"s_{i:04d}"
                 try:
                     results.append(run_session(page, persona, sid, i, base_url, log, cfg, rng))
                 except Exception as exc:  # noqa: BLE001 — one bad session must not kill the round
-                    log.emit(sid, persona["id"], "http_error", "unknown", None, {"error": str(exc)[:200]})
-                    log.emit(sid, persona["id"], "session_end", "unknown", None, {
+                    log.emit(sid, pid, "http_error", "unknown", None, {"error": str(exc)[:200]})
+                    log.emit(sid, pid, "session_end", "unknown", None, {
                         "outcome": "abandoned", "last_step": "unknown", "total_ms": 0,
                         "steps": 0, "errors": 1, "abandon_reason": "simulator_error",
                     })
-                    results.append({"outcome": "abandoned", "persona": persona["id"]})
-                finally:
-                    context.close()
+                    results.append({"outcome": "abandoned", "persona": pid})
         finally:
+            for ctx, _pg in contexts.values():
+                try:
+                    ctx.close()
+                except PlaywrightError:
+                    pass
             browser.close()
             log.close()
 

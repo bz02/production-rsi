@@ -1,0 +1,87 @@
+{
+  "current_round": 0,
+  "phase": "idle",
+  "phase_options": [
+    "analyzing",
+    "implementing",
+    "running_ab",
+    "decided",
+    "idle"
+  ],
+  "conversion_series": [
+    {
+      "round": 0,
+      "control": 0.25
+    }
+  ],
+  "rounds": [
+    {
+      "round": 0,
+      "title": "Baseline measurement",
+      "status": "baseline",
+      "autonomy": "n/a",
+      "lift_rel": null,
+      "p_value": null,
+      "before_img": "runs/round_0/before_mobile.png",
+      "after_img": null,
+      "diff_path": null,
+      "metrics_path": "metrics/round_0.json",
+      "conversion": {
+        "control": 0.25,
+        "treatment": null
+      },
+      "hypotheses": [],
+      "change_md": null,
+      "smoke": {
+        "passed": true,
+        "pass_count": 0,
+        "case_count": 0
+      },
+      "top_friction": [
+        {
+          "type": "abandon_reason",
+          "value": "blocked",
+          "count": 11,
+          "step": "product"
+        },
+        {
+          "type": "blocked_click",
+          "value": "click_intercepted",
+          "count": 11,
+          "step": "product",
+          "device": "mobile"
+        },
+        {
+          "type": "abandon_reason",
+          "value": "forced_signup",
+          "count": 4,
+          "step": "signup"
+        },
+        {
+          "type": "abandon_reason",
+          "value": "too_many_fields",
+          "count": 3,
+          "step": "signup",
+          "field_count": 8
+        },
+        {
+          "type": "validation_error",
+          "value": "field_rejected",
+          "count": 1,
+          "step": "shipping"
+        }
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "ts": 1789849650.9369953,
+      "msg": "Round 0: measuring the untouched baseline over 24 sessions"
+    },
+    {
+      "ts": 1789849771.5442443,
+      "msg": "Round 0 baseline conversion 25.0%; top friction: blocked, click_intercepted, forced_signup"
+    }
+  ],
+  "updated_at": 1789849771.5444436
+}

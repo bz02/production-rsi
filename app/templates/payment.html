@@ -30,4 +30,12 @@
     our warehouse. We never store full card numbers.</p>
   <button class="btn btn-primary btn-wide" data-testid="primary-action" type="submit">Pay &pound;{{ '%.2f'|format(total) }}</button>
 </form>
+
+<aside class="paybar" data-testid="paybar">
+  <div class="shell paybar-in">
+    <span class="paybar-total"><span>Total due today</span><b>&pound;{{ '%.2f'|format(total) }}</b></span>
+    <span class="paybar-note"><strong>Secured</strong> by Nimbus Pay &middot; 3-D Secure</span>
+    <span class="paybar-note">Free returns for 60 days &middot; VAT included</span>
+  </div>
+</aside>
 {% endblock %}
