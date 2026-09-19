@@ -346,327 +346,350 @@
 <script>
 const DATA = /*%%RUN_DATA%%*/null;
 
-const pct = (v, d = 1) => (v == null ? '–' : `${(v * 100).toFixed(d)}%`);
-const pp = (v, d = 1) => (v == null ? '–' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(d)}pp`);
-const pval = (p) => (p == null ? '–' : p < 0.001 ? '<0.001' : p.toFixed(3));
-const el = (tag, cls, text) => {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text != null) n.textContent = text;
-  return n;
-};
+// This file is the template, not the report. `docs/build_report.py` substitutes the
+// run's artifacts for the placeholder above and writes `docs/index.html`. Opened on
+// its own there is nothing to render, and reading DATA would throw on the first line
+// — so say which file this is instead, and say it in the page rather than the
+// console, where whoever opened it is actually looking.
+if (!DATA) {
+  const notice = document.createElement("div");
+  notice.className = "wrap";
+  notice.style.cssText = "padding:70px 20px;max-width:62ch";
+  notice.innerHTML = `
+    <div class="eyebrow">docs/_report_template.html</div>
+    <h1 style="font-size:28px">This is the template, not the report</h1>
+    <p class="lede">It carries the layout and none of the numbers. The run's own
+      artifacts are substituted into it when the report is built.</p>
+    <pre class="cmd" style="margin-top:22px"><b>python docs/build_report.py</b>
+open docs/index.html</pre>`;
+  document.body.replaceChildren(notice);
+} else {
+  render();
+}
 
-/* ------------------------------------------------------------------ header */
+function render() {
+  const pct = (v, d = 1) => (v == null ? '–' : `${(v * 100).toFixed(d)}%`);
+  const pp = (v, d = 1) => (v == null ? '–' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(d)}pp`);
+  const pval = (p) => (p == null ? '–' : p < 0.001 ? '<0.001' : p.toFixed(3));
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
 
-document.getElementById('repoLink').href = DATA.repo;
-document.getElementById('meta').replaceChildren(...[
-  [`${DATA.sessions.toLocaleString()}`, 'real browser sessions'],
-  [`${DATA.n_per_arm}`, 'sessions per arm'],
-  [`${DATA.rounds_run}`, 'rounds'],
-  ['two-proportion z-test', 'decision rule'],
-].map(([v, k]) => {
-  const c = el('span', 'chip');
-  c.append(el('b', null, v), document.createTextNode(' ' + k));
-  return c;
-}));
+  /* ------------------------------------------------------------------ header */
 
-document.getElementById('kpis').replaceChildren(...[
-  ['baseline at round 0', pct(DATA.baseline), ''],
-  ['after three rounds', pct(DATA.final), 'good'],
-  ['relative gain', `+${(DATA.total_rel * 100).toFixed(0)}%`, 'accent'],
-  ['changes adopted', `${DATA.adopted}/${DATA.rounds_run}`, ''],
-  ['rolled back', `${DATA.rounds_run - DATA.adopted}`, ''],
-].map(([label, value, cls]) => {
-  const d = el('div', `kpi ${cls}`.trim());
-  d.append(el('b', null, value), el('span', null, label));
-  return d;
-}));
+  document.getElementById('repoLink').href = DATA.repo;
+  document.getElementById('meta').replaceChildren(...[
+    [`${DATA.sessions.toLocaleString()}`, 'real browser sessions'],
+    [`${DATA.n_per_arm}`, 'sessions per arm'],
+    [`${DATA.rounds_run}`, 'rounds'],
+    ['two-proportion z-test', 'decision rule'],
+  ].map(([v, k]) => {
+    const c = el('span', 'chip');
+    c.append(el('b', null, v), document.createTextNode(' ' + k));
+    return c;
+  }));
 
-document.getElementById('ceiling').textContent =
-  `The run ends at ${pct(DATA.final, 0)} because this simulated population has exactly three `
-  + `reasons to leave and the loop removed all three — there is nobody left to lose. The numbers `
-  + `to read are the per-round lifts and their p-values, not the ceiling.`;
+  document.getElementById('kpis').replaceChildren(...[
+    ['baseline at round 0', pct(DATA.baseline), ''],
+    ['after three rounds', pct(DATA.final), 'good'],
+    ['relative gain', `+${(DATA.total_rel * 100).toFixed(0)}%`, 'accent'],
+    ['changes adopted', `${DATA.adopted}/${DATA.rounds_run}`, ''],
+    ['rolled back', `${DATA.rounds_run - DATA.adopted}`, ''],
+  ].map(([label, value, cls]) => {
+    const d = el('div', `kpi ${cls}`.trim());
+    d.append(el('b', null, value), el('span', null, label));
+    return d;
+  }));
 
-/* ------------------------------------------------------------------- chart */
+  document.getElementById('ceiling').textContent =
+    `The run ends at ${pct(DATA.final, 0)} because this simulated population has exactly three `
+    + `reasons to leave and the loop removed all three — there is nobody left to lose. The numbers `
+    + `to read are the per-round lifts and their p-values, not the ceiling.`;
 
-function renderChart() {
-  const host = document.getElementById('chart');
-  const s = DATA.series;
-  const W = 1000, H = 380, padL = 52, padR = 92, padT = 28, padB = 66;
-  const vals = s.flatMap((p) => [p.control, p.treatment, p.holdout_control, p.holdout_treatment])
-    .filter((v) => v != null);
-  const maxV = Math.min(1, Math.ceil((Math.max(...vals) * 1.1) / 0.2) * 0.2);
-  const x = (i) => padL + (i * (W - padL - padR)) / (s.length - 1);
-  const y = (v) => H - padB - (v / maxV) * (H - padT - padB);
+  /* ------------------------------------------------------------------- chart */
 
-  const parts = [];
-  for (let t = 0; t <= Math.round(maxV / 0.2); t++) {
-    const v = t * 0.2;
-    parts.push(`<line class="grid-line" x1="${padL}" y1="${y(v)}" x2="${W - padR}" y2="${y(v)}"/>`);
-    parts.push(`<text class="axis-text" x="${padL - 12}" y="${y(v) + 4}" text-anchor="end">${(v * 100).toFixed(0)}%</text>`);
-  }
+  function renderChart() {
+    const host = document.getElementById('chart');
+    const s = DATA.series;
+    const W = 1000, H = 380, padL = 52, padR = 92, padT = 28, padB = 66;
+    const vals = s.flatMap((p) => [p.control, p.treatment, p.holdout_control, p.holdout_treatment])
+      .filter((v) => v != null);
+    const maxV = Math.min(1, Math.ceil((Math.max(...vals) * 1.1) / 0.2) * 0.2);
+    const x = (i) => padL + (i * (W - padL - padR)) / (s.length - 1);
+    const y = (v) => H - padB - (v / maxV) * (H - padT - padB);
 
-  // within-round connector: control -> candidate is the experiment's own comparison
-  s.forEach((p, i) => {
-    if (p.treatment == null) return;
-    parts.push(`<line class="connector" x1="${x(i)}" y1="${y(p.control)}" x2="${x(i)}" y2="${y(p.treatment)}"/>`);
-  });
-
-  const path = (key) => s.map((p, i) => (p[key] == null ? null : `${x(i)},${y(p[key])}`))
-    .filter(Boolean).join(' ');
-  const holdPts = s.map((p, i) => {
-    const v = p.holdout_treatment ?? p.holdout_control;
-    return v == null ? null : `${x(i)},${y(v)}`;
-  }).filter(Boolean).join(' ');
-
-  parts.push(`<polyline class="line-hold" points="${holdPts}"/>`);
-  parts.push(`<polyline class="line-base" points="${path('control')}"/>`);
-  parts.push(`<polyline class="line-cand" points="${path('treatment')}"/>`);
-
-  s.forEach((p, i) => {
-    const hv = p.holdout_treatment ?? p.holdout_control;
-    if (hv != null) parts.push(`<circle class="dot-hold" cx="${x(i)}" cy="${y(hv)}" r="4.5"/>`);
-    parts.push(`<circle class="dot-base" cx="${x(i)}" cy="${y(p.control)}" r="5"/>`);
-    if (p.treatment != null) parts.push(`<circle class="dot-cand" cx="${x(i)}" cy="${y(p.treatment)}" r="5.5"/>`);
-    parts.push(`<text class="round-tick" x="${x(i)}" y="${H - padB + 24}" text-anchor="middle">round ${p.round}</text>`);
-    if (p.adopted) {
-      parts.push(`<rect class="adopt-mark" x="${x(i) - 20}" y="${H - padB + 34}" width="40" height="3" rx="1.5"/>`);
-      parts.push(`<text class="adopt-text" x="${x(i)}" y="${H - padB + 50}" text-anchor="middle">ADOPTED</text>`);
+    const parts = [];
+    for (let t = 0; t <= Math.round(maxV / 0.2); t++) {
+      const v = t * 0.2;
+      parts.push(`<line class="grid-line" x1="${padL}" y1="${y(v)}" x2="${W - padR}" y2="${y(v)}"/>`);
+      parts.push(`<text class="axis-text" x="${padL - 12}" y="${y(v) + 4}" text-anchor="end">${(v * 100).toFixed(0)}%</text>`);
     }
-  });
 
-  // Direct labels on the last point of each series, so identity is never colour-alone.
-  const last = s[s.length - 1];
-  const lastHold = last.holdout_treatment ?? last.holdout_control;
-  parts.push(`<text class="label" x="${x(s.length - 1) + 12}" y="${y(last.treatment ?? last.control) + 4}">${pct(last.treatment ?? last.control, 0)} candidate</text>`);
-  parts.push(`<text class="label-muted" x="${x(s.length - 1) + 12}" y="${y(last.control) + 18}">${pct(last.control, 0)} baseline</text>`);
-  if (lastHold != null && Math.abs(y(lastHold) - y(last.treatment ?? 0)) > 14) {
-    parts.push(`<text class="label-muted" x="${x(s.length - 1) + 12}" y="${y(lastHold) + 4}">${pct(lastHold, 0)} holdout</text>`);
+    // within-round connector: control -> candidate is the experiment's own comparison
+    s.forEach((p, i) => {
+      if (p.treatment == null) return;
+      parts.push(`<line class="connector" x1="${x(i)}" y1="${y(p.control)}" x2="${x(i)}" y2="${y(p.treatment)}"/>`);
+    });
+
+    const path = (key) => s.map((p, i) => (p[key] == null ? null : `${x(i)},${y(p[key])}`))
+      .filter(Boolean).join(' ');
+    const holdPts = s.map((p, i) => {
+      const v = p.holdout_treatment ?? p.holdout_control;
+      return v == null ? null : `${x(i)},${y(v)}`;
+    }).filter(Boolean).join(' ');
+
+    parts.push(`<polyline class="line-hold" points="${holdPts}"/>`);
+    parts.push(`<polyline class="line-base" points="${path('control')}"/>`);
+    parts.push(`<polyline class="line-cand" points="${path('treatment')}"/>`);
+
+    s.forEach((p, i) => {
+      const hv = p.holdout_treatment ?? p.holdout_control;
+      if (hv != null) parts.push(`<circle class="dot-hold" cx="${x(i)}" cy="${y(hv)}" r="4.5"/>`);
+      parts.push(`<circle class="dot-base" cx="${x(i)}" cy="${y(p.control)}" r="5"/>`);
+      if (p.treatment != null) parts.push(`<circle class="dot-cand" cx="${x(i)}" cy="${y(p.treatment)}" r="5.5"/>`);
+      parts.push(`<text class="round-tick" x="${x(i)}" y="${H - padB + 24}" text-anchor="middle">round ${p.round}</text>`);
+      if (p.adopted) {
+        parts.push(`<rect class="adopt-mark" x="${x(i) - 20}" y="${H - padB + 34}" width="40" height="3" rx="1.5"/>`);
+        parts.push(`<text class="adopt-text" x="${x(i)}" y="${H - padB + 50}" text-anchor="middle">ADOPTED</text>`);
+      }
+    });
+
+    // Direct labels on the last point of each series, so identity is never colour-alone.
+    const last = s[s.length - 1];
+    const lastHold = last.holdout_treatment ?? last.holdout_control;
+    parts.push(`<text class="label" x="${x(s.length - 1) + 12}" y="${y(last.treatment ?? last.control) + 4}">${pct(last.treatment ?? last.control, 0)} candidate</text>`);
+    parts.push(`<text class="label-muted" x="${x(s.length - 1) + 12}" y="${y(last.control) + 18}">${pct(last.control, 0)} baseline</text>`);
+    if (lastHold != null && Math.abs(y(lastHold) - y(last.treatment ?? 0)) > 14) {
+      parts.push(`<text class="label-muted" x="${x(s.length - 1) + 12}" y="${y(lastHold) + 4}">${pct(lastHold, 0)} holdout</text>`);
+    }
+    // First point carries a label too: it is the number everything else is measured against.
+    parts.push(`<text class="label-muted" x="${x(0) + 10}" y="${y(s[0].control) - 12}">${pct(s[0].control, 0)} at start</text>`);
+
+    // hover targets
+    s.forEach((p, i) => {
+      const w = (W - padL - padR) / (s.length - 1);
+      parts.push(`<rect class="hit" data-i="${i}" x="${x(i) - w / 2}" y="${padT - 10}" width="${w}" height="${H - padT - padB + 20}"/>`);
+    });
+    parts.push(`<line class="crosshair" id="cross" x1="0" y1="${padT - 10}" x2="0" y2="${H - padB}" opacity="0"/>`);
+
+    host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"
+        aria-label="Conversion rate by round: baseline, candidate and holdout arms">${parts.join('')}</svg>
+      <div class="tip" id="tip"></div>`;
+
+    const svg = host.querySelector('svg');
+    const tip = document.getElementById('tip');
+    const cross = document.getElementById('cross');
+    const round = (i) => DATA.rounds.find((r) => r.round === s[i].round);
+
+    svg.querySelectorAll('.hit').forEach((hit) => {
+      hit.addEventListener('mouseenter', () => {
+        const i = +hit.dataset.i;
+        const p = s[i];
+        const r = round(i);
+        cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
+        cross.setAttribute('opacity', '1');
+        const rows = [
+          ['var(--series-baseline)', 'baseline', pct(p.control)],
+          p.treatment != null ? ['var(--series-candidate)', 'candidate', pct(p.treatment)] : null,
+          (p.holdout_treatment ?? p.holdout_control) != null
+            ? ['var(--series-holdout)', 'holdout', pct(p.holdout_treatment ?? p.holdout_control)] : null,
+        ].filter(Boolean);
+        tip.innerHTML = `<h4>Round ${p.round}${r ? ' · ' + r.title : ' · baseline measurement'}</h4>`
+          + rows.map(([c, k, v]) => `<div class="row"><span class="k"><i style="background:${c}"></i>${k}</span><span class="v">${v}</span></div>`).join('')
+          + (r && r.lift_abs != null
+            ? `<div class="row" style="margin-top:7px"><span class="k">lift</span><span class="v">${pp(r.lift_abs)}</span></div>`
+              + `<div class="row"><span class="k">p-value</span><span class="v">${pval(r.p_value)}</span></div>`
+            : '');
+        const box = host.getBoundingClientRect();
+        const px = (x(i) / W) * box.width;
+        tip.style.left = `${Math.min(Math.max(px - 90, 0), box.width - 200)}px`;
+        tip.style.top = `${(y(p.treatment ?? p.control) / H) * box.height - 20}px`;
+        tip.classList.add('on');
+      });
+      hit.addEventListener('mouseleave', () => {
+        tip.classList.remove('on');
+        cross.setAttribute('opacity', '0');
+      });
+    });
+
+    // table view — the same data, for anyone who cannot use the chart
+    const t = el('table');
+    t.innerHTML = '<thead><tr><th>round</th><th>change</th><th class="num">baseline</th>'
+      + '<th class="num">candidate</th><th class="num">lift</th><th class="num">p</th>'
+      + '<th class="num">holdout</th><th>decision</th></tr></thead>';
+    const tb = el('tbody');
+    s.forEach((p) => {
+      const r = DATA.rounds.find((x) => x.round === p.round);
+      const tr = el('tr');
+      tr.innerHTML = `<td>${p.round}</td><td>${r ? r.title : 'baseline measurement'}</td>`
+        + `<td class="num">${pct(p.control)}</td><td class="num">${pct(p.treatment)}</td>`
+        + `<td class="num">${r ? pp(r.lift_abs) : '–'}</td><td class="num">${r ? pval(r.p_value) : '–'}</td>`
+        + `<td class="num">${pct(p.holdout_treatment ?? p.holdout_control)}</td>`
+        + `<td>${r ? r.status.replace(/_/g, ' ') : '–'}</td>`;
+      tb.append(tr);
+    });
+    t.append(tb);
+    document.getElementById('dataTable').replaceChildren(t);
   }
-  // First point carries a label too: it is the number everything else is measured against.
-  parts.push(`<text class="label-muted" x="${x(0) + 10}" y="${y(s[0].control) - 12}">${pct(s[0].control, 0)} at start</text>`);
+  renderChart();
+  addEventListener('resize', () => { /* viewBox scales; tooltip repositions on next hover */ });
 
-  // hover targets
-  s.forEach((p, i) => {
-    const w = (W - padL - padR) / (s.length - 1);
-    parts.push(`<rect class="hit" data-i="${i}" x="${x(i) - w / 2}" y="${padT - 10}" width="${w}" height="${H - padT - padB + 20}"/>`);
-  });
-  parts.push(`<line class="crosshair" id="cross" x1="0" y1="${padT - 10}" x2="0" y2="${H - padB}" opacity="0"/>`);
+  /* ----------------------------------------------------------------- defects */
 
-  host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img"
-      aria-label="Conversion rate by round: baseline, candidate and holdout arms">${parts.join('')}</svg>
-    <div class="tip" id="tip"></div>`;
+  const DEFECTS = [
+    ['D1 · the form', 'Signup asks for nine fields before anyone may pay.',
+     'abandon_reason: too_many_fields'],
+    ['D2 · the wall', 'Checkout is gated behind account creation, with no guest path.',
+     'abandon_reason: forced_signup'],
+    ['D3 · the tap target', 'A pinned total bar covers the pay button on phones.',
+     'click_blocked / click_intercepted'],
+  ];
+  document.getElementById('defects').replaceChildren(...DEFECTS.map(([h, p, sig]) => {
+    const c = el('div', 'card');
+    c.append(el('h3', null, h), el('p', null, p));
+    const code = el('p');
+    code.innerHTML = `<code style="color:var(--warn)">${sig}</code>`;
+    code.style.marginTop = '9px';
+    c.append(code);
+    return c;
+  }));
 
-  const svg = host.querySelector('svg');
-  const tip = document.getElementById('tip');
-  const cross = document.getElementById('cross');
-  const round = (i) => DATA.rounds.find((r) => r.round === s[i].round);
+  const f0 = DATA.funnel0.filter((f) => f.dropped > 0 || f.step === 'confirmation');
+  const fr = DATA.friction0.map((f) => `<code>${f.value}</code> ${f.count} sessions${f.step ? ' at ' + f.step : ''}`);
+  document.getElementById('funnel0').innerHTML =
+    `<p style="margin-bottom:10px">Conversion <b>${pct(DATA.baseline)}</b> over ${DATA.n_per_arm} sessions`
+    + (DATA.holdout0 != null ? ` (holdout ${pct(DATA.holdout0)})` : '') + `. Where they went:</p>`
+    + `<table><thead><tr><th>step</th><th class="num">reached</th><th class="num">lost here</th><th class="num">drop rate</th></tr></thead><tbody>`
+    + DATA.funnel0.map((f) => `<tr><td><code>${f.step}</code></td><td class="num">${f.reached}</td>`
+        + `<td class="num">${f.dropped}</td><td class="num">${(f.drop_rate * 100).toFixed(0)}%</td></tr>`).join('')
+    + `</tbody></table>`
+    + `<p style="margin-top:14px;color:var(--muted)">Ranked friction handed to the agent: ${fr.join(' · ')}</p>`;
 
-  svg.querySelectorAll('.hit').forEach((hit) => {
-    hit.addEventListener('mouseenter', () => {
-      const i = +hit.dataset.i;
-      const p = s[i];
-      const r = round(i);
-      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i));
-      cross.setAttribute('opacity', '1');
-      const rows = [
-        ['var(--series-baseline)', 'baseline', pct(p.control)],
-        p.treatment != null ? ['var(--series-candidate)', 'candidate', pct(p.treatment)] : null,
-        (p.holdout_treatment ?? p.holdout_control) != null
-          ? ['var(--series-holdout)', 'holdout', pct(p.holdout_treatment ?? p.holdout_control)] : null,
-      ].filter(Boolean);
-      tip.innerHTML = `<h4>Round ${p.round}${r ? ' · ' + r.title : ' · baseline measurement'}</h4>`
-        + rows.map(([c, k, v]) => `<div class="row"><span class="k"><i style="background:${c}"></i>${k}</span><span class="v">${v}</span></div>`).join('')
-        + (r && r.lift_abs != null
-          ? `<div class="row" style="margin-top:7px"><span class="k">lift</span><span class="v">${pp(r.lift_abs)}</span></div>`
-            + `<div class="row"><span class="k">p-value</span><span class="v">${pval(r.p_value)}</span></div>`
-          : '');
-      const box = host.getBoundingClientRect();
-      const px = (x(i) / W) * box.width;
-      tip.style.left = `${Math.min(Math.max(px - 90, 0), box.width - 200)}px`;
-      tip.style.top = `${(y(p.treatment ?? p.control) / H) * box.height - 20}px`;
-      tip.classList.add('on');
+  /* ------------------------------------------------------------------ rounds */
+
+  function renderRound(r) {
+    const human = r.autonomy === 'pending_approval';
+    const card = el('article', `round ${human ? 'human' : 'adopted'}`);
+
+    const head = el('div', 'r-head');
+    head.append(el('span', 'idx', `round ${r.round}`));
+    const t = el('div');
+    t.append(el('h3', null, r.title));
+    const sub = el('div', 'sub');
+    sub.innerHTML = `<code>${r.hypothesis_id || ''}</code> · chosen by ${r.selection_mode || 'heuristic'} ranking`
+      + ` · ${r.files_changed} file(s), ${r.lines_changed} changed line(s)`;
+    t.append(sub);
+    head.append(t);
+    head.append(el('span', `pill ${human ? 'warn' : 'good'}`,
+      human ? 'human approved' : 'auto-adopted'));
+    card.append(head);
+
+    const stats = el('div', 'stats');
+    [['baseline', pct(r.control), ''], ['candidate', pct(r.treatment), ''],
+     ['absolute lift', pp(r.lift_abs), 'up'], ['relative', `+${(r.lift_rel * 100).toFixed(0)}%`, 'up'],
+     ['p-value', pval(r.p_value), ''],
+     ['95% CI', r.ci95 ? `${pp(r.ci95[0], 0)} … ${pp(r.ci95[1], 0)}` : '–', '']]
+      .forEach(([k, v, cls]) => {
+        const d = el('div', `stat ${cls}`.trim());
+        d.append(el('b', null, v), el('span', null, k));
+        stats.append(d);
+      });
+    card.append(stats);
+
+    const body = el('div', 'r-body');
+
+    if (r.rationale) {
+      const w = el('div');
+      w.append(el('div', 'h4', "Why the agent picked this one"));
+      w.append(el('p', 'quote', r.rationale));
+      body.append(w);
+    }
+
+    // hypotheses
+    const hw = el('div');
+    hw.append(el('div', 'h4', `Hypotheses considered — ${r.hypotheses.length} proposed, 1 implemented`));
+    const ht = el('table');
+    ht.innerHTML = '<thead><tr><th>hypothesis</th><th class="num">sessions lost to it</th>'
+      + '<th>risk</th><th>outcome</th></tr></thead><tbody>'
+      + r.hypotheses.map((h) => `<tr><td>${h.title}<div style="color:var(--dim);font-family:var(--mono);font-size:11.5px">${h.id}</div></td>`
+        + `<td class="num">${h.friction_sessions}</td><td>${h.risk}</td>`
+        + `<td>${h.selected ? '<span class="hyp-sel">implemented</span>'
+          : (h.already_shipped ? 'already shipped' : 'deferred')}</td></tr>`).join('')
+      + '</tbody>';
+    hw.append(ht);
+    body.append(hw);
+
+    // diff
+    if (r.diff.length) {
+      const dw = el('div');
+      dw.append(el('div', 'h4', 'The change it wrote'));
+      const pre = el('pre', 'diff');
+      pre.innerHTML = r.diff.map((l) => `<span class="d-${l.k}">${l.t.replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) || ' '}</span>`).join('');
+      dw.append(pre);
+      body.append(dw);
+    }
+
+    // gate
+    const cases = (r.smoke.cases || []);
+    if (cases.length) {
+      const gw = el('div');
+      gw.append(el('div', 'h4',
+        `Eval gate — ${r.smoke.pass_count}/${r.smoke.case_count} passed, before any traffic`));
+      const g = el('div', 'gate');
+      cases.forEach((c) => {
+        const d = el('div', 'case');
+        d.append(el('i', null, c.passed ? '✓' : '✕'), el('span', null, c.case), el('span', 'kind', c.kind));
+        if (c.detail) d.append(el('span', 'detail', c.detail));
+        g.append(d);
+      });
+      gw.append(g);
+      body.append(gw);
+    }
+
+    // shots
+    if (r.shots.before && r.shots.after) {
+      const sw = el('div');
+      const [where, was, now] = r.shots.caption;
+      sw.append(el('div', 'h4', `Before and after — ${where}: ${was} → ${now}`));
+      const grid = el('div', 'shots');
+      [['before', r.shots.before], ['after', r.shots.after]].forEach(([phase, src]) => {
+        const fig = el('figure', 'shot');
+        const cap = el('figcaption');
+        cap.innerHTML = `<span class="tag ${phase}">${phase}</span><span>${phase === 'before' ? 'control arm' : 'treatment arm'}</span>`;
+        const img = el('img');
+        img.src = src;
+        img.alt = `${phase}: ${where}`;
+        img.loading = 'lazy';
+        fig.append(cap, img);
+        grid.append(fig);
+      });
+      sw.append(grid);
+      body.append(sw);
+    }
+
+    // verdict
+    const v = el('div', `verdict ${human ? 'warn' : 'good'}`);
+    v.textContent = r.decision_reason;
+    const paths = el('div', 'paths');
+    r.files.forEach((p) => {
+      const c = el('code', r.needs_approval.includes(p) ? 'flag' : null, p);
+      paths.append(c);
     });
-    hit.addEventListener('mouseleave', () => {
-      tip.classList.remove('on');
-      cross.setAttribute('opacity', '0');
-    });
-  });
+    const vw = el('div');
+    vw.append(el('div', 'h4', 'What the analyzer decided'), v, paths);
+    body.append(vw);
 
-  // table view — the same data, for anyone who cannot use the chart
-  const t = el('table');
-  t.innerHTML = '<thead><tr><th>round</th><th>change</th><th class="num">baseline</th>'
-    + '<th class="num">candidate</th><th class="num">lift</th><th class="num">p</th>'
-    + '<th class="num">holdout</th><th>decision</th></tr></thead>';
-  const tb = el('tbody');
-  s.forEach((p) => {
-    const r = DATA.rounds.find((x) => x.round === p.round);
-    const tr = el('tr');
-    tr.innerHTML = `<td>${p.round}</td><td>${r ? r.title : 'baseline measurement'}</td>`
-      + `<td class="num">${pct(p.control)}</td><td class="num">${pct(p.treatment)}</td>`
-      + `<td class="num">${r ? pp(r.lift_abs) : '–'}</td><td class="num">${r ? pval(r.p_value) : '–'}</td>`
-      + `<td class="num">${pct(p.holdout_treatment ?? p.holdout_control)}</td>`
-      + `<td>${r ? r.status.replace(/_/g, ' ') : '–'}</td>`;
-    tb.append(tr);
-  });
-  t.append(tb);
-  document.getElementById('dataTable').replaceChildren(t);
+    card.append(body);
+    return card;
+  }
+
+  document.getElementById('rounds').replaceChildren(...DATA.rounds.map(renderRound));
+  document.getElementById('runtime').textContent =
+    `A three-round run is about ${DATA.sessions.toLocaleString()} browser sessions and takes roughly 13 minutes on a laptop.`;
 }
-renderChart();
-addEventListener('resize', () => { /* viewBox scales; tooltip repositions on next hover */ });
-
-/* ----------------------------------------------------------------- defects */
-
-const DEFECTS = [
-  ['D1 · the form', 'Signup asks for nine fields before anyone may pay.',
-   'abandon_reason: too_many_fields'],
-  ['D2 · the wall', 'Checkout is gated behind account creation, with no guest path.',
-   'abandon_reason: forced_signup'],
-  ['D3 · the tap target', 'A pinned total bar covers the pay button on phones.',
-   'click_blocked / click_intercepted'],
-];
-document.getElementById('defects').replaceChildren(...DEFECTS.map(([h, p, sig]) => {
-  const c = el('div', 'card');
-  c.append(el('h3', null, h), el('p', null, p));
-  const code = el('p');
-  code.innerHTML = `<code style="color:var(--warn)">${sig}</code>`;
-  code.style.marginTop = '9px';
-  c.append(code);
-  return c;
-}));
-
-const f0 = DATA.funnel0.filter((f) => f.dropped > 0 || f.step === 'confirmation');
-const fr = DATA.friction0.map((f) => `<code>${f.value}</code> ${f.count} sessions${f.step ? ' at ' + f.step : ''}`);
-document.getElementById('funnel0').innerHTML =
-  `<p style="margin-bottom:10px">Conversion <b>${pct(DATA.baseline)}</b> over ${DATA.n_per_arm} sessions`
-  + (DATA.holdout0 != null ? ` (holdout ${pct(DATA.holdout0)})` : '') + `. Where they went:</p>`
-  + `<table><thead><tr><th>step</th><th class="num">reached</th><th class="num">lost here</th><th class="num">drop rate</th></tr></thead><tbody>`
-  + DATA.funnel0.map((f) => `<tr><td><code>${f.step}</code></td><td class="num">${f.reached}</td>`
-      + `<td class="num">${f.dropped}</td><td class="num">${(f.drop_rate * 100).toFixed(0)}%</td></tr>`).join('')
-  + `</tbody></table>`
-  + `<p style="margin-top:14px;color:var(--muted)">Ranked friction handed to the agent: ${fr.join(' · ')}</p>`;
-
-/* ------------------------------------------------------------------ rounds */
-
-function renderRound(r) {
-  const human = r.autonomy === 'pending_approval';
-  const card = el('article', `round ${human ? 'human' : 'adopted'}`);
-
-  const head = el('div', 'r-head');
-  head.append(el('span', 'idx', `round ${r.round}`));
-  const t = el('div');
-  t.append(el('h3', null, r.title));
-  const sub = el('div', 'sub');
-  sub.innerHTML = `<code>${r.hypothesis_id || ''}</code> · chosen by ${r.selection_mode || 'heuristic'} ranking`
-    + ` · ${r.files_changed} file(s), ${r.lines_changed} changed line(s)`;
-  t.append(sub);
-  head.append(t);
-  head.append(el('span', `pill ${human ? 'warn' : 'good'}`,
-    human ? 'human approved' : 'auto-adopted'));
-  card.append(head);
-
-  const stats = el('div', 'stats');
-  [['baseline', pct(r.control), ''], ['candidate', pct(r.treatment), ''],
-   ['absolute lift', pp(r.lift_abs), 'up'], ['relative', `+${(r.lift_rel * 100).toFixed(0)}%`, 'up'],
-   ['p-value', pval(r.p_value), ''],
-   ['95% CI', r.ci95 ? `${pp(r.ci95[0], 0)} … ${pp(r.ci95[1], 0)}` : '–', '']]
-    .forEach(([k, v, cls]) => {
-      const d = el('div', `stat ${cls}`.trim());
-      d.append(el('b', null, v), el('span', null, k));
-      stats.append(d);
-    });
-  card.append(stats);
-
-  const body = el('div', 'r-body');
-
-  if (r.rationale) {
-    const w = el('div');
-    w.append(el('div', 'h4', "Why the agent picked this one"));
-    w.append(el('p', 'quote', r.rationale));
-    body.append(w);
-  }
-
-  // hypotheses
-  const hw = el('div');
-  hw.append(el('div', 'h4', `Hypotheses considered — ${r.hypotheses.length} proposed, 1 implemented`));
-  const ht = el('table');
-  ht.innerHTML = '<thead><tr><th>hypothesis</th><th class="num">sessions lost to it</th>'
-    + '<th>risk</th><th>outcome</th></tr></thead><tbody>'
-    + r.hypotheses.map((h) => `<tr><td>${h.title}<div style="color:var(--dim);font-family:var(--mono);font-size:11.5px">${h.id}</div></td>`
-      + `<td class="num">${h.friction_sessions}</td><td>${h.risk}</td>`
-      + `<td>${h.selected ? '<span class="hyp-sel">implemented</span>'
-        : (h.already_shipped ? 'already shipped' : 'deferred')}</td></tr>`).join('')
-    + '</tbody>';
-  hw.append(ht);
-  body.append(hw);
-
-  // diff
-  if (r.diff.length) {
-    const dw = el('div');
-    dw.append(el('div', 'h4', 'The change it wrote'));
-    const pre = el('pre', 'diff');
-    pre.innerHTML = r.diff.map((l) => `<span class="d-${l.k}">${l.t.replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) || ' '}</span>`).join('');
-    dw.append(pre);
-    body.append(dw);
-  }
-
-  // gate
-  const cases = (r.smoke.cases || []);
-  if (cases.length) {
-    const gw = el('div');
-    gw.append(el('div', 'h4',
-      `Eval gate — ${r.smoke.pass_count}/${r.smoke.case_count} passed, before any traffic`));
-    const g = el('div', 'gate');
-    cases.forEach((c) => {
-      const d = el('div', 'case');
-      d.append(el('i', null, c.passed ? '✓' : '✕'), el('span', null, c.case), el('span', 'kind', c.kind));
-      if (c.detail) d.append(el('span', 'detail', c.detail));
-      g.append(d);
-    });
-    gw.append(g);
-    body.append(gw);
-  }
-
-  // shots
-  if (r.shots.before && r.shots.after) {
-    const sw = el('div');
-    const [where, was, now] = r.shots.caption;
-    sw.append(el('div', 'h4', `Before and after — ${where}: ${was} → ${now}`));
-    const grid = el('div', 'shots');
-    [['before', r.shots.before], ['after', r.shots.after]].forEach(([phase, src]) => {
-      const fig = el('figure', 'shot');
-      const cap = el('figcaption');
-      cap.innerHTML = `<span class="tag ${phase}">${phase}</span><span>${phase === 'before' ? 'control arm' : 'treatment arm'}</span>`;
-      const img = el('img');
-      img.src = src;
-      img.alt = `${phase}: ${where}`;
-      img.loading = 'lazy';
-      fig.append(cap, img);
-      grid.append(fig);
-    });
-    sw.append(grid);
-    body.append(sw);
-  }
-
-  // verdict
-  const v = el('div', `verdict ${human ? 'warn' : 'good'}`);
-  v.textContent = r.decision_reason;
-  const paths = el('div', 'paths');
-  r.files.forEach((p) => {
-    const c = el('code', r.needs_approval.includes(p) ? 'flag' : null, p);
-    paths.append(c);
-  });
-  const vw = el('div');
-  vw.append(el('div', 'h4', 'What the analyzer decided'), v, paths);
-  body.append(vw);
-
-  card.append(body);
-  return card;
-}
-
-document.getElementById('rounds').replaceChildren(...DATA.rounds.map(renderRound));
-document.getElementById('runtime').textContent =
-  `A three-round run is about ${DATA.sessions.toLocaleString()} browser sessions and takes roughly 13 minutes on a laptop.`;
 </script>
 </body>
 </html>

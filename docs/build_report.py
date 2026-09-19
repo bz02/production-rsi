@@ -23,7 +23,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 HERE = Path(__file__).resolve().parent
-TEMPLATE = HERE / "report_template.html"
+# Underscore-prefixed, so GitHub Pages (Jekyll) does not publish it. A half-built
+# page served next to the real one is worse than no page: it renders blank, and
+# whoever found it has no reason to think they are looking at a template.
+TEMPLATE = HERE / "_report_template.html"
 OUT = HERE / "index.html"
 
 REPO = "https://github.com/bz02/production-rsi"
