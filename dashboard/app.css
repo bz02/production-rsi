@@ -284,6 +284,8 @@ pre.diff-body .ctx { color: var(--muted); }
 /* lightbox */
 .lightbox { position: fixed; inset: 0; z-index: 90; background: rgba(4, 6, 11, 0.92);
   display: grid; place-items: center; gap: 12px; padding: 32px; }
+/* A `display` declaration beats the UA style for [hidden], so it has to be restated. */
+.lightbox[hidden] { display: none; }
 .lightbox img { max-width: min(430px, 92vw); max-height: 82vh; border-radius: 12px;
   box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8); background: #fff; }
 .lb-cap { color: var(--muted); font-size: 12.5px; font-family: var(--mono); margin: 0; }

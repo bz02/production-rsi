@@ -248,26 +248,17 @@ def run_session(page: Any, persona: dict[str, Any], sid: str, session_no: int,
             log.emit(sid, pid, "purchase", step, None, {"persona": pid})
             break
 
-        # Rule 3: a guest path, if this persona wants one, beats any account form.
         guest = page.query_selector(GUEST)
-        if guest is not None and persona["prefers_guest"]:
-            if click(page, GUEST, log, sid, pid, step, retries) == "blocked":
-                abandon_reason = "blocked"
-                break
-            log.emit(sid, pid, "step_complete", step, "guest-checkout")
-            continue
 
-        # Rule 2: forced account creation with no way around it.
-        if step == "signup" and guest is None:
-            if rng.random() < persona["abandon_on_forced_signup_prob"]:
-                abandon_reason = "forced_signup"
-                break
+        # Rules are evaluated in the order the interface document numbers them, and
+        # that order is load-bearing: a persona who would balk both at the length of
+        # the form and at the forced account is attributed to whichever it meets
+        # first, which is the wall of fields already on screen.
 
         # Rule 1: too much asked at once.
         required = visible_required_fields(page)
         if len(required) > persona["max_fields_per_form"]:
             if rng.random() < too_many_prob:
-                abandon_reason = "too_many_fields"
                 log.emit(sid, pid, "abandon", step, None, {
                     "reason": "too_many_fields",
                     "field_count": len(required),
@@ -279,6 +270,20 @@ def run_session(page: Any, persona: dict[str, Any], sid: str, session_no: int,
                     "steps": steps_seen, "errors": errors, "abandon_reason": "too_many_fields",
                 })
                 return {"outcome": "abandoned", "persona": pid}
+
+        # Rule 2: forced account creation with no way around it.
+        if step == "signup" and guest is None:
+            if rng.random() < persona["abandon_on_forced_signup_prob"]:
+                abandon_reason = "forced_signup"
+                break
+
+        # Rule 3: a guest path, if this persona wants one, beats any account form.
+        if guest is not None and persona["prefers_guest"]:
+            if click(page, GUEST, log, sid, pid, step, retries) == "blocked":
+                abandon_reason = "blocked"
+                break
+            log.emit(sid, pid, "step_complete", step, "guest-checkout")
+            continue
 
         # Rule 5: a typo on a required field, corrected after the app complains.
         typo = bool(required) and rng.random() < persona["typo_rate"]
